@@ -44,7 +44,7 @@ flowchart TD
 | # | Issue | Severity | Citation |
 |---|---|---|---|
 | ~~1~~ | ~~Production build fails — `Uint8Array` not assignable to `BlobPart`~~ | ~~Critical~~ | ~~`cover-letter/page.tsx:171`, `ENVIRONMENT_VERIFICATION.md` §4~~ |
-| 2 | Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading | Critical | `signup/page.tsx#L54`, `PROJECT_DISCOVERY.md` §19, §21 |
+| ~~2~~ | ~~Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading~~ | ~~Critical~~ | ~~`signup/page.tsx#L54`, `PROJECT_DISCOVERY.md` §19, §21~~ |
 | 3 | All `/api/*` routes have zero authentication — any client can incur OpenRouter billing or upload files | High | `BACKEND_AUDIT.md` §4 |
 | 4 | No validation middleware (`middleware.ts`) — no CORS restriction, no rate limiting | High | `BACKEND_AUDIT.md` §4 |
 | 5 | Job Matcher AI insights fetched but never rendered | High | `JDMatcherPanel.tsx#L470`, `FRONTEND_AUDIT.md` §4 |
@@ -60,6 +60,8 @@ flowchart TD
 | # | Issue | Severity | Resolution Date | Sprint Day | Resolution Note |
 |---|---|---|---|---|---|
 | 1 | Production build fails — `Uint8Array` not assignable to `BlobPart` | Critical | 2026-06-29 | Sprint 2, Day 1 | Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor in `cover-letter/page.tsx` to satisfy DOM type checker. |
+| 2 | Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading | Critical | 2026-06-29 | Sprint 2, Day 2 | Standardized casing on `"users"` (lowercase) in `signup/page.tsx` to match all existing profile display/settings query reads. |
+
 
 ## Confirmed Technology Boundaries
 

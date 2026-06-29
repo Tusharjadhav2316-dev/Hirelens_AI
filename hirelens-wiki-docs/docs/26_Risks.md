@@ -10,11 +10,11 @@
 **Mitigation:** Resolved (Sprint 2, Day 1) by casting `pdfBytes.buffer as ArrayBuffer` inside the `Blob` constructor in `cover-letter/page.tsx`.
 **Priority:** Resolved
 
-### Firestore Collection Casing Mismatch
+### ~~Firestore Collection Casing Mismatch~~ (Resolved)
 **Description:** `signup/page.tsx#L54` writes new profiles to a `"Users"` collection; settings/profile reads query the lowercase `"users"` collection.
 **Impact:** New user profile data silently fails to load — a real, user-facing data bug, not theoretical.
-**Mitigation:** Standardize on one casing (lowercase `"users"`, matching the read path) and correct the write path. Addressed Sprint 2, Day 2.
-**Priority:** Critical
+**Mitigation:** Resolved (Sprint 2, Day 2) by standardizing collection casing on lowercase `"users"` in the `signup/page.tsx` write path.
+**Priority:** Resolved
 
 ### Unauthenticated API Routes
 **Description:** None of `/api/parse-pdf`, `/api/ai-improve`, `/api/ai-insights`, `/api/jd-refine`, `/api/cover-letter` perform any session/token check.

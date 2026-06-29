@@ -51,7 +51,7 @@ export default function SignupPage() {
             await updateProfile(user, { displayName: data.name });
 
             // 3. Save additional info in Firestore per Database Schema requirement
-            await setDoc(doc(db, "Users", user.uid), {
+            await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 email: user.email,
                 name: data.name,
