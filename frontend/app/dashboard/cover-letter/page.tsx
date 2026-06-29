@@ -201,7 +201,7 @@ export default function CoverLetterPage() {
             }
 
             const pdfBytes = await pdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+            const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
             saveAs(blob, `Cover_Letter_${companyName.replace(/\\s+/g, '_')}.pdf`);
         } catch (err) {
             console.error("PDF Export error:", err);

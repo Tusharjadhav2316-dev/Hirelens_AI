@@ -4,11 +4,11 @@
 
 ## Confirmed Risks
 
-### Production Build Failure
+### ~~Production Build Failure~~ (Resolved)
 **Description:** `npm run build` fails with a TypeScript error — `Uint8Array` is not assignable to `BlobPart` in `cover-letter/page.tsx:171`.
 **Impact:** The application cannot be deployed to production at all in its current state.
-**Mitigation:** Fix the type mismatch (cast/wrap the `Uint8Array` correctly before constructing the `Blob`). Addressed Sprint 2, Day 1.
-**Priority:** Critical
+**Mitigation:** Resolved (Sprint 2, Day 1) by casting `pdfBytes.buffer as ArrayBuffer` inside the `Blob` constructor in `cover-letter/page.tsx`.
+**Priority:** Resolved
 
 ### Firestore Collection Casing Mismatch
 **Description:** `signup/page.tsx#L54` writes new profiles to a `"Users"` collection; settings/profile reads query the lowercase `"users"` collection.

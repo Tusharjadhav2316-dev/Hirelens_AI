@@ -43,7 +43,7 @@ flowchart TD
 
 | # | Issue | Severity | Citation |
 |---|---|---|---|
-| 1 | Production build fails — `Uint8Array` not assignable to `BlobPart` | Critical | `cover-letter/page.tsx:171`, `ENVIRONMENT_VERIFICATION.md` §4 |
+| ~~1~~ | ~~Production build fails — `Uint8Array` not assignable to `BlobPart`~~ | ~~Critical~~ | ~~`cover-letter/page.tsx:171`, `ENVIRONMENT_VERIFICATION.md` §4~~ |
 | 2 | Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading | Critical | `signup/page.tsx#L54`, `PROJECT_DISCOVERY.md` §19, §21 |
 | 3 | All `/api/*` routes have zero authentication — any client can incur OpenRouter billing or upload files | High | `BACKEND_AUDIT.md` §4 |
 | 4 | No validation middleware (`middleware.ts`) — no CORS restriction, no rate limiting | High | `BACKEND_AUDIT.md` §4 |
@@ -54,6 +54,12 @@ flowchart TD
 | 9 | `ResumeContext.tsx` provider value unmemoized — every keystroke re-renders the full editor + preview tree | Medium (perf) | `FRONTEND_AUDIT.md` §2 |
 | 10 | Word (.docx) export is an unimplemented placeholder | Medium (missing feature, not a defect) | `lib/exportService.ts`, `FRONTEND_AUDIT.md` §4 |
 | 11 | Duplicate PDF parsing libraries (`pdf-parse` server-side, `pdfjs-dist` client-side) — bundle bloat | Low | `FRONTEND_AUDIT.md` §3 |
+
+## Resolved Issues
+
+| # | Issue | Severity | Resolution Date | Sprint Day | Resolution Note |
+|---|---|---|---|---|---|
+| 1 | Production build fails — `Uint8Array` not assignable to `BlobPart` | Critical | 2026-06-29 | Sprint 2, Day 1 | Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor in `cover-letter/page.tsx` to satisfy DOM type checker. |
 
 ## Confirmed Technology Boundaries
 
