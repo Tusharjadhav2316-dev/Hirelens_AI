@@ -1,18 +1,24 @@
 import { getApps, getApp, initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
-const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-};
+let adminAuth: ReturnType<typeof getAuth> | null = null;
 
-// Initialize Firebase Admin SDK only once
-const app = getApps().length === 0
-    ? initializeApp({ credential: cert(serviceAccount) })
-    : getApp();
+function getAdminAuth() {
+    if (!adminAuth) {
+        const serviceAccount = {
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+        };
 
-const adminAuth = getAuth(app);
+        const app = getApps().length === 0
+            ? initializeApp({ credential: cert(serviceAccount) })
+            : getApp();
+
+        adminAuth = getAuth(app);
+    }
+    return adminAuth;
+}
 
 export async function verifyAuth(req: Request) {
     const authHeader = req.headers.get("Authorization");
@@ -25,7 +31,8 @@ export async function verifyAuth(req: Request) {
         throw new Error("Token missing from Authorization header");
     }
 
+    const auth = getAdminAuth();
     // verifyIdToken will throw an error if the token is expired or invalid
-    const decodedToken = await adminAuth.verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
     return decodedToken;
 }
