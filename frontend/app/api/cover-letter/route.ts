@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
+import { verifyAuth } from "@/lib/verifyAuth";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function POST(req: Request) {
+    try {
+        const decodedUser = await verifyAuth(req);
+    } catch (authError) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!OPENROUTER_API_KEY) {
         return NextResponse.json({ error: "OpenRouter API key is not configured." }, { status: 500 });
     }

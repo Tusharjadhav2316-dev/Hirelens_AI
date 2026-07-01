@@ -18,7 +18,7 @@
 |---|---|---|
 | Architecture | Next.js serverless API routes (`frontend/app/api/*`) — stateless AI proxy only, no DB access | `BACKEND_AUDIT.md` §1, §3 |
 | Server-side PDF parsing | `pdf-parse` (npm) | `BACKEND_AUDIT.md` §1 |
-| Auth on API routes | **None — confirmed gap** | `BACKEND_AUDIT.md` §4 |
+| Auth on API routes | Firebase Admin SDK token verification (`firebase-admin`) | Sprint 2, Day 3 implementation |
 | Request middleware | **None — `middleware.ts` does not exist** | `BACKEND_AUDIT.md` §4 |
 
 ## Database
@@ -33,7 +33,7 @@
 | Layer | Technology | Confirmed Via |
 |---|---|---|
 | Mechanism | Firebase Authentication, client-side session listener (`AuthContext.tsx`) | `FRONTEND_AUDIT.md` §2 |
-| API route protection | None confirmed — Sprint 2 priority | `BACKEND_AUDIT.md` §4 |
+| API route protection | Bearer token Authorization headers verified server-side | Sprint 2, Day 3 implementation |
 
 ## AI / External APIs
 | Service | Purpose | Confirmed Via |

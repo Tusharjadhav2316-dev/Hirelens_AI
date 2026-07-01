@@ -2,7 +2,7 @@ let activeController: AbortController | null = null;
 let lastRequestTime = 0;
 const COOLDOWN_MS = 2000;
 
-export async function improveSection(section: "summary" | "experience" | "projects", content: string): Promise<string> {
+export async function improveSection(section: "summary" | "experience" | "projects", content: string, token: string): Promise<string> {
     // 1. Safety mechanisms (Anti-spam / Cooldown)
     const now = Date.now();
     if (now - lastRequestTime < COOLDOWN_MS) {
@@ -24,6 +24,7 @@ export async function improveSection(section: "summary" | "experience" | "projec
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
             },
             body: JSON.stringify({ section, content }),
             signal

@@ -18,7 +18,7 @@ flowchart TD
         Firestore["Cloud Firestore\n(resume revisions, history, settings, profiles)"]
     end
 
-    subgraph ServerlessAPI["Next.js Serverless API Routes (frontend/app/api/*) — STATELESS PROXY, NO DB ACCESS, NO AUTH"]
+    subgraph ServerlessAPI["Next.js Serverless API Routes (frontend/app/api/*) — SECURED WITH FIREBASE ADMIN"]
         ParsePdf["POST /api/parse-pdf — pdf-parse"]
         AiImprove["POST /api/ai-improve"]
         AiInsights["POST /api/ai-insights"]
@@ -33,11 +33,11 @@ flowchart TD
     Contexts --> Firestore
     Pages --> LocalEngines
     Pages --> ClientPDF
-    Pages -->|fetch, no auth header| ServerlessAPI
+    Pages -->|fetch with Bearer token header| ServerlessAPI
     ServerlessAPI -->|OPENROUTER_API_KEY| OpenRouter
 ```
 
-**Key architectural fact (confirmed, `BACKEND_AUDIT.md` §3):** the Next.js API layer holds **no database connection at all**. It is a stateless proxy to OpenRouter only. Every Firestore read/write (resume revisions, history, settings, profile, account deletion) happens **directly from the browser** via the Firebase Web SDK. There is no backend authorization boundary between the client and the database beyond Firestore's own security rules (not yet audited — see Open Questions below).
+**Key architectural fact (confirmed, `BACKEND_AUDIT.md` §3):** the Next.js API layer holds **no database connection at all**. It is a stateless proxy to OpenRouter only, but is now protected by Firebase Admin SDK token verification. Every Firestore read/write (resume revisions, history, settings, profile, account deletion) happens **directly from the browser** via the Firebase Web SDK. There is no backend database connection beyond Firestore's own security rules (not yet audited — see Open Questions below).
 
 ## Known Issues (Confirmed, Cited — Sprint 1 Findings)
 
@@ -45,7 +45,7 @@ flowchart TD
 |---|---|---|---|
 | ~~1~~ | ~~Production build fails — `Uint8Array` not assignable to `BlobPart`~~ | ~~Critical~~ | ~~`cover-letter/page.tsx:171`, `ENVIRONMENT_VERIFICATION.md` §4~~ |
 | ~~2~~ | ~~Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading~~ | ~~Critical~~ | ~~`signup/page.tsx#L54`, `PROJECT_DISCOVERY.md` §19, §21~~ |
-| 3 | All `/api/*` routes have zero authentication — any client can incur OpenRouter billing or upload files | High | `BACKEND_AUDIT.md` §4 |
+| ~~3~~ | ~~All `/api/*` routes have zero authentication — any client can incur OpenRouter billing or upload files~~ | ~~High~~ | ~~`BACKEND_AUDIT.md` §4~~ |
 | 4 | No validation middleware (`middleware.ts`) — no CORS restriction, no rate limiting | High | `BACKEND_AUDIT.md` §4 |
 | 5 | Job Matcher AI insights fetched but never rendered | High | `JDMatcherPanel.tsx#L470`, `FRONTEND_AUDIT.md` §4 |
 | 6 | Prompt injection risk — job description / custom text concatenated into prompts unsanitized | High | `BACKEND_AUDIT.md` §4 |
@@ -61,6 +61,7 @@ flowchart TD
 |---|---|---|---|---|---|
 | 1 | Production build fails — `Uint8Array` not assignable to `BlobPart` | Critical | 2026-06-29 | Sprint 2, Day 1 | Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor in `cover-letter/page.tsx` to satisfy DOM type checker. |
 | 2 | Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading | Critical | 2026-06-29 | Sprint 2, Day 2 | Standardized casing on `"users"` (lowercase) in `signup/page.tsx` to match all existing profile display/settings query reads. |
+| 3 | All `/api/*` routes have zero authentication | High | 2026-07-01 | Sprint 2, Day 3 | Integrated Firebase Admin SDK to verify Firebase Auth ID tokens server-side in all API routes. |
 
 
 ## Confirmed Technology Boundaries

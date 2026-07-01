@@ -81,8 +81,12 @@ export default function JDMatcherPanel({ resume }: JDMatcherPanelProps) {
             const formData = new FormData();
             formData.append("file", file);
 
+            const token = await user?.getIdToken() || "";
             const res = await fetch("/api/parse-pdf", {
                 method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
                 body: formData,
             });
 
@@ -167,9 +171,13 @@ Summary: ${resume.personalInfo.summary}
         }
 
         try {
+            const token = await user?.getIdToken() || "";
             const response = await fetch("/api/jd-refine", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
                 body: JSON.stringify({ resumeText: targetTextToAnalyze, jobDescription }),
             });
 

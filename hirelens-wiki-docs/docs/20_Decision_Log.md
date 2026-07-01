@@ -29,7 +29,7 @@
 **Decision:** Secure `/api/*` routes by verifying the Firebase ID token (sent from the already-authenticated client) server-side using the Firebase Admin SDK, rather than introducing a separate auth system.
 **Reason:** The project already uses Firebase Auth client-side; introducing a second auth mechanism would duplicate infrastructure the project doesn't need. The Admin SDK is the standard, supported way to verify a Firebase ID token server-side.
 **Alternatives Considered:** A custom JWT/session system (rejected — duplicates existing Firebase Auth for no benefit); API keys per client (rejected — doesn't authenticate the actual end user, only an app instance).
-**Status:** Accepted
+**Status:** Accepted (Implemented in Sprint 2, Day 3 - 2026-07-01)
 
 ### [Sprint 2, Day 1] Cover Letter PDF Export Type Casting: ArrayBuffer vs. any
 **Decision:** Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor instead of using `pdfBytes as any`.

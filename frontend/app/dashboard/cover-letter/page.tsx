@@ -92,6 +92,7 @@ export default function CoverLetterPage() {
         setError(null);
 
         try {
+            const token = await user?.getIdToken() || "";
             const result = await generateCoverLetter({
                 resumeText: inputMode === "Resume" ? resumeText : undefined,
                 customInput: inputMode === "Custom" ? customInput : undefined,
@@ -99,7 +100,7 @@ export default function CoverLetterPage() {
                 companyName,
                 jobDescription,
                 tone
-            });
+            }, token);
             setCoverLetterText(result);
 
             if (user) {
@@ -126,7 +127,8 @@ export default function CoverLetterPage() {
         setActionLoading(action);
         setError(null);
         try {
-            const result = await processCoverLetterAction({ currentText, action });
+            const token = await user?.getIdToken() || "";
+            const result = await processCoverLetterAction({ currentText, action }, token);
             setCoverLetterText(result);
             // Updating the DOM node manually to stay in sync if it's currently focused
             if (editorRef.current) {

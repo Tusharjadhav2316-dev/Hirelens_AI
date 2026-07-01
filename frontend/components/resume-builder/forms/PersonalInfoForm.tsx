@@ -6,6 +6,7 @@ import { Sparkles, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { improveSection } from "@/lib/aiService";
 import AIImprovementModal from "../AIImprovementModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
     data: PersonalInfo;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function PersonalInfoForm({ data, onChange }: Props) {
+    const { user } = useAuth();
     const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
@@ -35,7 +37,8 @@ export default function PersonalInfoForm({ data, onChange }: Props) {
         setImprovedText("");
 
         try {
-            const improved = await improveSection("summary", currentSummary);
+            const token = await user?.getIdToken() || "";
+            const improved = await improveSection("summary", currentSummary, token);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);

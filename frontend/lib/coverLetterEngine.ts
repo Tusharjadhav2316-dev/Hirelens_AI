@@ -12,10 +12,13 @@ export interface ImproveCoverLetterParams {
     action: "improve" | "shorten" | "impactful";
 }
 
-export async function generateCoverLetter(params: GenerateCoverLetterParams): Promise<string> {
+export async function generateCoverLetter(params: GenerateCoverLetterParams, token: string): Promise<string> {
     const res = await fetch("/api/cover-letter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ action: "generate", ...params }),
     });
 
@@ -26,10 +29,13 @@ export async function generateCoverLetter(params: GenerateCoverLetterParams): Pr
     return data.content;
 }
 
-export async function processCoverLetterAction(params: ImproveCoverLetterParams): Promise<string> {
+export async function processCoverLetterAction(params: ImproveCoverLetterParams, token: string): Promise<string> {
     const res = await fetch("/api/cover-letter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ ...params }),
     });
 

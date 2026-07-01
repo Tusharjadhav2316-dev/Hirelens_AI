@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
+import { verifyAuth } from '@/lib/verifyAuth';
 const pdfParse = require('pdf-parse');
 
 export async function POST(req: Request) {
+    try {
+        const decodedUser = await verifyAuth(req);
+    } catch (authError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File;

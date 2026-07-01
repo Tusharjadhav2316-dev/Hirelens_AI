@@ -16,11 +16,11 @@
 **Mitigation:** Resolved (Sprint 2, Day 2) by standardizing collection casing on lowercase `"users"` in the `signup/page.tsx` write path.
 **Priority:** Resolved
 
-### Unauthenticated API Routes
+### ~~Unauthenticated API Routes~~ (Resolved)
 **Description:** None of `/api/parse-pdf`, `/api/ai-improve`, `/api/ai-insights`, `/api/jd-refine`, `/api/cover-letter` perform any session/token check.
 **Impact:** Any external client can call these routes directly, incurring OpenRouter billing costs or uploading arbitrary files, with no rate limiting or origin restriction.
-**Mitigation:** Add Firebase Admin SDK ID-token verification to every route. Addressed Sprint 2, Day 3.
-**Priority:** High
+**Mitigation:** Resolved (Sprint 2, Day 3) by integrating Firebase Admin SDK ID-token verification on all five routes.
+**Priority:** Resolved
 
 ### Prompt Injection via Unsanitized Input
 **Description:** Job descriptions and custom text fields are concatenated directly into LLM system/user prompts without sanitization or structural wrapping.

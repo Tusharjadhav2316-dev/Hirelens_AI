@@ -6,6 +6,7 @@ import { Plus, Trash2, Sparkles, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { improveSection } from "@/lib/aiService";
 import AIImprovementModal from "../AIImprovementModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
     data: Experience[];
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ExperienceForm({ data, onChange }: Props) {
+    const { user } = useAuth();
     const [improvingId, setImprovingId] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
@@ -48,7 +50,8 @@ export default function ExperienceForm({ data, onChange }: Props) {
         setImprovedText("");
 
         try {
-            const improved = await improveSection("experience", currentDesc);
+            const token = await user?.getIdToken() || "";
+            const improved = await improveSection("experience", currentDesc, token);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
