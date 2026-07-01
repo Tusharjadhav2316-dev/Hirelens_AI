@@ -466,7 +466,7 @@ Summary: ${resume.personalInfo.summary}
                             </div>
                         )}
 
-                        {aiInsights && (
+                        {(isRefining || aiInsights) && (
                             <div className="mt-8 overflow-hidden rounded-xl border border-purple-200 dark:border-purple-800/50 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-slate-900 shadow-sm animate-in zoom-in-95 duration-300">
                                 <div className="bg-purple-100/50 dark:bg-purple-900/30 px-6 py-4 flex items-center justify-between border-b border-purple-100 dark:border-purple-800/30">
                                     <h4 className="text-sm font-bold text-purple-900 dark:text-purple-300 flex items-center gap-2">
@@ -475,8 +475,16 @@ Summary: ${resume.personalInfo.summary}
                                     </h4>
                                 </div>
                                 <div className="p-6">
-                                    <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                                    </div>
+                                    {isRefining ? (
+                                        <div className="flex flex-col items-center justify-center py-8">
+                                            <Loader2 className="w-8 h-8 text-purple-500 animate-spin mb-3" />
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Generating alignment insights...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                                            {aiInsights}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

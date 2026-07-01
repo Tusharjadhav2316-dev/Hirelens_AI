@@ -28,11 +28,11 @@
 **Mitigation:** Structural prompt wrapping / input sanitization — explicitly deferred to Sprint 3 (Sprint 2 is auth-focused; combining auth and prompt-hardening in one day would violate the "one focused task per day" rule). Logged here so it isn't lost.
 **Priority:** High (deferred, not dismissed)
 
-### Job Matcher Insights Not Rendered
+### ~~Job Matcher Insights Not Rendered~~ (Resolved)
 **Description:** `JDMatcherPanel.tsx#L470` receives `{aiInsights}` from `/api/jd-refine` but never renders it in the UI.
 **Impact:** A working backend feature is invisible to users — wasted API spend with zero user value delivered.
-**Mitigation:** Render the existing `aiInsights` value in its container. Addressed Sprint 2, Day 4.
-**Priority:** High
+**Mitigation:** Resolved (Sprint 2, Day 4) by rendering `aiInsights` inside its container with support for loading state.
+**Priority:** Resolved
 
 ### Hardcoded Firebase Credentials
 **Description:** `lib/firebase.ts` hardcodes Firebase config values; `.env.example` lists the equivalent variables but they are unused by the code.
@@ -58,11 +58,11 @@
 **Mitigation:** Deferred to a future cleanup sprint — not production-blocking.
 **Priority:** Low
 
-### Broken Settings Navigation Link
+### ~~Broken Settings Navigation Link~~ (Resolved)
 **Description:** `Navbar.tsx#L120` links to `#profile` instead of `/dashboard/settings`.
 **Impact:** Minor UX dead end — users can't reach settings via that entry point.
-**Mitigation:** One-line fix. Addressed Sprint 2, Day 4 (bundled with the Job Matcher insights fix as two small, isolated, low-risk UI corrections).
-**Priority:** Low
+**Mitigation:** Resolved (Sprint 2, Day 4) by correcting link to `/dashboard/settings`.
+**Priority:** Resolved
 
 ## Speculative / Not Yet Confirmed
 
