@@ -13,7 +13,7 @@
 | Sprint | Title | Est. Days | Difficulty | Depends On | Status |
 |---|---|---|---|---|---|
 | 1 | Project Discovery | 5 | Easy | — | ✅ Complete |
-| 2 | Production Stabilization | 5 | Medium | Sprint 1 | ⬜ Not Started |
+| 2 | Production Stabilization | 5 | Medium | Sprint 1 | ✅ Complete |
 | 3 | Backend Refactoring | 8 | Medium-Hard | Sprint 2 | ⬜ Not Started |
 | 4 | Frontend Refactoring | 8 | Medium | Sprint 2 | ⬜ Not Started |
 | 5 | AI Career Coach UI | 6 | Medium | Sprint 4 | ⬜ Not Started |
@@ -38,9 +38,15 @@
 **Actual Outcome:** Confirmed stack is Next.js 16 (App Router) + React 19 + TypeScript, Firebase Auth/Firestore (client-SDK only, no server-side DB), OpenRouter (Gemini 2.0 Flash Lite) for all AI completions. Identified 2 critical blockers (build failure, Firestore casing bug), 3 high-severity confirmed issues (unauthenticated API routes, no middleware, broken Job Matcher display), and several medium/low items — full list in `02_Architecture.md` and `26_Risks.md`. The original 14-sprint roadmap's tech assumptions were invalidated — see "Roadmap Corrections Needed" above.
 **Deliverables:** `PROJECT_DISCOVERY.md`, `ENVIRONMENT_VERIFICATION.md`, `BACKEND_AUDIT.md`, `FRONTEND_AUDIT.md` (archived in `Sprint_01/_raw_findings/`), consolidated into `docs/02_Architecture.md`, `docs/21_Tech_Stack.md`, `docs/26_Risks.md`, `docs/20_Decision_Log.md`.
 
-### Sprint 2 — Production Stabilization
+### Sprint 2 — Production Stabilization ✅ Complete
 **Goal:** Resolve the Critical and High-severity issues confirmed in Sprint 1 — production build failure, Firestore casing bug, unauthenticated API routes, broken Job Matcher insights display, hardcoded secrets. No new features, no UI redesign, no agent orchestration.
 **Dependencies:** Sprint 1.
+**Actual Outcome:** Successfully completed all 5 daily stabilization tasks to secure, fix, and prepare the project for deployment:
+- Day 1: Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor, resolving the production build type error in `cover-letter/page.tsx`.
+- Day 2: Standardized the Firestore collection name to lowercase `"users"` to align with reads and resolve the new profile loading defect.
+- Day 3: Integrated Firebase Admin SDK token authentication headers validation in all serverless API routes (`/api/*`).
+- Day 4: Rendered Job Matcher AI insights with full loading state in the UI, and corrected the settings link in the navigation menu.
+- Day 5: Extracted the client-exposed Firebase configuration fields from `lib/firebase.ts` into environment variables, updated `.env.example`, and successfully compiled Next.js via Turbopack.
 **Deliverables:** See `Sprint_02/Day_01.md` through `Day_05.md`.
 
 ### Sprint 3 — Backend Refactoring

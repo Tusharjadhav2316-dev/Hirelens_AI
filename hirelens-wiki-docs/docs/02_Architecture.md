@@ -49,7 +49,7 @@ flowchart TD
 | 4 | No validation middleware (`middleware.ts`) — no CORS restriction, no rate limiting | High | `BACKEND_AUDIT.md` §4 |
 | ~~5~~ | ~~Job Matcher AI insights fetched but never rendered~~ | ~~High~~ | ~~`JDMatcherPanel.tsx#L470`, `FRONTEND_AUDIT.md` §4~~ |
 | 6 | Prompt injection risk — job description / custom text concatenated into prompts unsanitized | High | `BACKEND_AUDIT.md` §4 |
-| 7 | Firebase config hardcoded in `lib/firebase.ts`; `.env.example` Firebase vars exist but are unused | Medium | `ENVIRONMENT_VERIFICATION.md` §3, §5 |
+| ~~7~~ | ~~Firebase config hardcoded in `lib/firebase.ts`; `.env.example` Firebase vars exist but are unused~~ | ~~Medium~~ | ~~`ENVIRONMENT_VERIFICATION.md` §3, §5~~ |
 | ~~8~~ | ~~Settings navbar link is a dead hash (`#profile`) instead of `/dashboard/settings`~~ | ~~Low~~ | ~~`Navbar.tsx#L120`, `FRONTEND_AUDIT.md` §4~~ |
 | 9 | `ResumeContext.tsx` provider value unmemoized — every keystroke re-renders the full editor + preview tree | Medium (perf) | `FRONTEND_AUDIT.md` §2 |
 | 10 | Word (.docx) export is an unimplemented placeholder | Medium (missing feature, not a defect) | `lib/exportService.ts`, `FRONTEND_AUDIT.md` §4 |
@@ -63,6 +63,7 @@ flowchart TD
 | 2 | Firestore collection casing mismatch (`"Users"` write vs. `"users"` read) breaks profile loading | Critical | 2026-06-29 | Sprint 2, Day 2 | Standardized casing on `"users"` (lowercase) in `signup/page.tsx` to match all existing profile display/settings query reads. |
 | 3 | All `/api/*` routes have zero authentication | High | 2026-07-01 | Sprint 2, Day 3 | Integrated Firebase Admin SDK to verify Firebase Auth ID tokens server-side in all API routes. |
 | 5 | Job Matcher AI insights fetched but never rendered | High | 2026-07-01 | Sprint 2, Day 4 | Rendered `aiInsights` inside its container with full support for the `isRefining` loading state in `JDMatcherPanel.tsx`. |
+| 7 | Firebase config hardcoded in `lib/firebase.ts` | Medium | 2026-07-02 | Sprint 2, Day 5 | Sourced Firebase configuration from process.env.NEXT_PUBLIC_FIREBASE_* client variables. |
 | 8 | Settings navbar link is a dead hash (`#profile`) | Low | 2026-07-01 | Sprint 2, Day 4 | Corrected profile link in `Navbar.tsx` to navigate directly to `/dashboard/settings`. |
 
 

@@ -34,11 +34,11 @@
 **Mitigation:** Resolved (Sprint 2, Day 4) by rendering `aiInsights` inside its container with support for loading state.
 **Priority:** Resolved
 
-### Hardcoded Firebase Credentials
+### ~~Hardcoded Firebase Credentials~~ (Resolved)
 **Description:** `lib/firebase.ts` hardcodes Firebase config values; `.env.example` lists the equivalent variables but they are unused by the code.
 **Impact:** Config changes require a code edit + redeploy rather than an environment variable change; inconsistent with the rest of the env-variable-driven configuration (`OPENROUTER_API_KEY`).
-**Mitigation:** Move Firebase config to environment variables, actually wire up the existing `.env.example` entries. Addressed Sprint 2, Day 5.
-**Priority:** Medium
+**Mitigation:** Resolved (Sprint 2, Day 5) by moving Firebase client config to environment variables and wiring up the `NEXT_PUBLIC_FIREBASE_*` variables.
+**Priority:** Resolved
 
 ### Re-render Performance — Unmemoized Resume Context
 **Description:** `ResumeContext.tsx`'s provider value is recreated on every render; any keystroke in a builder form re-renders the entire editor + preview tree.

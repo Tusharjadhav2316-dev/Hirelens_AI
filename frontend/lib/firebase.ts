@@ -5,13 +5,13 @@ import { getStorage } from "firebase/storage";
 
 // Prevent re-initialization during hot reload
 const firebaseConfig = {
-    apiKey: "AIzaSyBnYAOJlCE-RIu60vG43nqO_GTEF_aw290",
-    authDomain: "hirelens-34590.firebaseapp.com",
-    projectId: "hirelens-34590",
-    storageBucket: "hirelens-34590.firebasestorage.app",
-    messagingSenderId: "279978660119",
-    appId: "1:279978660119:web:60d0ee209e952c2892e752",
-    measurementId: "G-T05NJTEVNS",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

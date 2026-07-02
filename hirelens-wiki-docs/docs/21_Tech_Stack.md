@@ -26,6 +26,7 @@
 |---|---|---|
 | Engine | Google Cloud Firestore (NoSQL) | `ENVIRONMENT_VERIFICATION.md` §2 |
 | Access pattern | Direct client-side access via Firebase Web SDK — no server-side DB client exists | `BACKEND_AUDIT.md` §3 |
+| Config Sourcing | Environment-variable-driven (`NEXT_PUBLIC_FIREBASE_*`) | Sprint 2, Day 5 |
 | Local dev setup | None (no Docker/local emulator found) — points directly at Firebase Cloud | `ENVIRONMENT_VERIFICATION.md` §2 |
 | Known defect | Collection name casing mismatch: writes to `"Users"`, reads from `"users"` | `PROJECT_DISCOVERY.md` §19, §21 |
 
