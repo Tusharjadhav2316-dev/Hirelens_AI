@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
+import { RESUME_OPTIMIZER_PERSONA, HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a professional resume optimization assistant. Respond only with the improved content. No markdown. No explanations. Do NOT invent numbers, metrics, companies, achievements, or technologies that are not present in the original content. Only improve clarity, wording, and structure."
+                        content: `${RESUME_OPTIMIZER_PERSONA} ${OUTPUT_FORMAT_PLAIN} ${HALLUCINATION_GUARDRAIL}`
                     },
                     {
                         role: "user",

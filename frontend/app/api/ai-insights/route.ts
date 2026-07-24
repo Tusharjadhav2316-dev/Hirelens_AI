@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
+import { AI_INSIGHTS_SYSTEM_PROMPT } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -47,7 +48,10 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
                 model: "google/gemini-2.0-flash-lite-001",
-                messages: [{ role: "user", content: prompt }]
+                messages: [
+                    { role: "system", content: AI_INSIGHTS_SYSTEM_PROMPT },
+                    { role: "user", content: prompt }
+                ]
             })
         });
 

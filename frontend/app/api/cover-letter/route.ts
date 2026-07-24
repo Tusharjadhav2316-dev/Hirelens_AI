@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
+import { HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "Resume text or custom input is required." }, { status: 400 });
             }
 
+            // Persona: see RESUME_OPTIMIZER_PERSONA in lib/promptTemplates.ts — to be integrated in a future sprint
             prompt = `
 You are an expert executive career coach and cover letter writer.
 Write a highly professional, engaging, and customized cover letter for a candidate applying to the position of "${jobTitle}" at "${companyName}".
@@ -54,7 +56,8 @@ Instructions:
 3. ${jobDescription ? "Extract key technical terms from the Job Description and ensure at least 3 are referenced naturally." : ""}
 4. The tone must affect sentence strength, formality, and confidence level.
 5. Avoid repetition. Avoid generic fluff phrases. Do NOT use fake placeholders like [Insert Insert] - write around it smoothly or infer from context if possible. If the candidate name is unknown from the text, use a generic signature like "Sincerely,\n[Your Name]".
-6. Output ONLY the cover letter text. No markdown, no preambles, no conversational filler.
+6. ${OUTPUT_FORMAT_PLAIN}
+7. ${HALLUCINATION_GUARDRAIL}
             `.trim();
         } else if (action === "improve" || action === "shorten" || action === "impactful") {
             const { currentText } = body;

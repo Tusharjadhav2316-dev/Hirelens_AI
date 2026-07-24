@@ -68,6 +68,8 @@ flowchart TD
 | 9 | `keywordDensityScore` was static placeholder value (100) | Medium | 2026-07-24 | Sprint 3, Day 1 | `keywordDensityScore` in `lib/atsAnalyzer.ts` is now a real computed metric measuring skill keyword matches against resume text. |
 | 10 | JD Matcher section scores were cosmetic bucket-fill approximations | Medium | 2026-07-24 | Sprint 3, Day 3 | Extended `analyzeJobMatch()` in `lib/jdMatcher.ts` with optional `resume?: Resume` parameter for structured section analysis, frequency weighting, and required/preferred skill detection. |
 | 11 | `/api/ai-improve` returned 400 for achievements/certifications and lacked JD context | High | 2026-07-24 | Sprint 3, Day 4 | Expanded `validSections` in `/api/ai-improve/route.ts` to include achievements and certifications, added section prompts, and added optional `jobDescription` context support. Updated `lib/aiService.ts`. |
+| 12 | Prompt strings were inline, duplicated across routes, and `ai-insights` lacked system prompt | Medium | 2026-07-24 | Sprint 3, Day 5 | Created `lib/promptTemplates.ts` as centralized prompt store, added `AI_INSIGHTS_SYSTEM_PROMPT` to `/api/ai-insights`, and aligned prompt guardrails in `ai-improve`, `jd-refine`, and `cover-letter`. |
+
 
 
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
+import { ATS_EXPERT_PERSONA, HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
                 messages: [
                     {
                         role: "system",
-                        content: "You are an ATS optimization expert.\nOnly analyze alignment between the provided resume text and job description.\nDo NOT invent skills.\nDo NOT fabricate missing qualifications.\nIf resume lacks something, simply state it is not mentioned.\nProvide actionable but factual suggestions.\nRespond in structured paragraphs.\nNo markdown.\nNo bullet symbols.\nNo explanations about what you are doing."
+                        content: `${ATS_EXPERT_PERSONA} ${HALLUCINATION_GUARDRAIL} ${OUTPUT_FORMAT_PLAIN} Provide actionable but factual suggestions. Respond in structured paragraphs.`
                     },
                     {
                         role: "user",
