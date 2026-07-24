@@ -45,6 +45,24 @@ function extractKeywords(text: string): string[] {
             keywordSet.add(word);
         }
     }
+
+    // Additive bigram pass for compound technical terms (e.g. "machine learning")
+    for (let i = 0; i < words.length - 1; i++) {
+        const w1 = words[i];
+        const w2 = words[i + 1];
+
+        if (
+            w1.length >= 2 &&
+            w2.length >= 2 &&
+            !STOP_WORDS.has(w1) &&
+            !STOP_WORDS.has(w2) &&
+            isNaN(Number(w1)) &&
+            isNaN(Number(w2))
+        ) {
+            keywordSet.add(`${w1} ${w2}`);
+        }
+    }
+
     return Array.from(keywordSet);
 }
 
@@ -59,7 +77,25 @@ function extractYearsOfExperience(text: string): number {
             maxYears = years;
         }
     }
-    return maxYears;
+
+    // Infer years of experience from 4-digit year ranges (e.g. "Jan 2019 - Dec 2023")
+    const yearRegex = /\b(20\d{2}|19\d{2})\b/g;
+    const yearMatches: number[] = [];
+    let yearMatch;
+
+    while ((yearMatch = yearRegex.exec(text)) !== null) {
+        yearMatches.push(parseInt(yearMatch[1], 10));
+    }
+
+    let inferredYears = 0;
+    if (yearMatches.length >= 2) {
+        const minYear = Math.min(...yearMatches);
+        const maxYear = Math.max(...yearMatches);
+        const diff = maxYear - minYear;
+        inferredYears = Math.min(40, diff);
+    }
+
+    return Math.max(maxYears, inferredYears > 0 ? inferredYears : 0);
 }
 
 function detectEducation(text: string): boolean {
@@ -77,7 +113,7 @@ function detectExperienceSection(text: string): boolean {
 }
 
 function detectQuantification(text: string): boolean {
-    return /\d+%|\d+\s*(?:users|clients|revenue|dollars|$|%|metrics)/i.test(text);
+    return /(\d+[xX×]|\d+%|\+\d+%|\$[\d,.]+[KkMmBb]?|\b(?:doubled|tripled|quadrupled)\b|\d+\s*(?:users|clients|revenue|dollars|projects|systems|teams|engineers))/i.test(text);
 }
 
 function countWeakVerbs(text: string): string[] {
@@ -275,9 +311,7 @@ export function analyzeResumeMatch(resumeText: string, jobDescription: string): 
         (experienceScore * 0.20) +
         (educationScore * 0.15);
 
-    if (finalScore < 35 && resumeText.trim().length > 0) {
-        finalScore = 35;
-    } else if (finalScore > 95 && (missingKeywords.length > 0 || missingEducation || experienceGap)) {
+    if (finalScore > 95 && (missingKeywords.length > 0 || missingEducation || experienceGap)) {
         finalScore = Math.min(finalScore, 95);
     }
 
@@ -291,6 +325,7 @@ export function analyzeResumeMatch(resumeText: string, jobDescription: string): 
             { label: "Education", weight: "15%", score: Math.round(educationScore) }
         ],
         flags: {
+            // Display cap only — does not affect final score calculation
             missingKeywords: missingKeywords.slice(0, 15),
             weakVerbs: weakVerbsList,
             noQuantification,
@@ -300,3 +335,4 @@ export function analyzeResumeMatch(resumeText: string, jobDescription: string): 
         }
     };
 }
+

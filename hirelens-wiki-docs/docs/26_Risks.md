@@ -83,12 +83,12 @@
 **Mitigation:** Resolved (Sprint 3, Day 1) by scoring certifications and achievements, adding skill level guidance, expanding weak verbs, and computing real keyword density score.
 **Priority:** Resolved
 
-### ATS Score Changes May Surprise Users (Addressed Sprint 3, Day 2)
-
+### ~~ATS Score Changes May Surprise Users~~ (Addressed Sprint 3, Day 2)
 **Description:** Removing the 35-point floor in `atsEngine.ts` means users who previously saw "35/100" for a poor resume will now see their actual (lower) score.
 **Impact:** Potentially confusing for users who ran an analysis pre-Sprint 3 and get a lower score post-Sprint 3 for the same document.
-**Mitigation:** The score is now honest — communicate clearly in UI copy that the analyzer has been improved. No code mitigation needed; this is the correct behavior.
-**Priority:** Low (acceptable side effect of accuracy improvement)
+**Mitigation:** Resolved (Sprint 3, Day 2). Floor removed, bigrams added, quantification improved, date ranges inferred. The score is now honest.
+**Priority:** Resolved
+
 
 ### Bigram Keyword Extraction Changes Existing Match Scores
 **Description:** Resumes that previously matched 0 keywords for a multi-word term ("machine learning") now match via bigram even if the full phrase is present.
