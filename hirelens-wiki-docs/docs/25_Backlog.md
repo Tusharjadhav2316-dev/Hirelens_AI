@@ -19,3 +19,21 @@
 
 ## How to Use This Document
 Update **Status** as work progresses (Not Started → In Progress → Done → Blocked). If a feature's sprint changes, update `01_Master_Roadmap.md` in the same commit so the two files never disagree.
+
+## Sprint 3 Items
+| Feature | Priority | Status | Sprint | Dependencies | Notes |
+|---|---|---|---|---|---|
+| Score certifications and achievements in atsAnalyzer.ts | High | Done (Sprint 3, Day 1) | Sprint 3, Day 1 | Sprint 2 | `keywordDensityScore` also computed |
+| Remove artificial 35-floor, add bigrams/better quantification in atsEngine.ts | High | Not Started | Sprint 3, Day 2 | Sprint 3 Day 1 | |
+| Frequency-weighted JD keywords + required/preferred scoring in jdMatcher.ts | High | Not Started | Sprint 3, Day 3 | Sprint 3 Day 2 | |
+| AI Improve: add achievements/certifications + optional JD context | High | Not Started | Sprint 3, Day 4 | Sprint 3 Day 1 | Also updates `lib/aiService.ts` |
+| Centralize prompts in lib/promptTemplates.ts; fix ai-insights system prompt | Medium | Not Started | Sprint 3, Day 5 | Sprint 3 Day 4 | New file: `lib/promptTemplates.ts` |
+
+## Deferred from Sprint 3 (candidates for Sprint 4)
+| Feature | Reason Deferred |
+|---|---|
+| Semantic embedding-based ATS matching | Requires new API call or library; significant scope beyond Sprint 3 |
+| Full cover-letter prompt centralization | 5 distinct prompt variants; deserves a dedicated day |
+| Word (.docx) export implementation | Feature work, already in backlog from Sprint 2 |
+| Firestore security rules audit | Security concern, not intelligence feature |
+| `ResumeContext` re-render performance | Performance concern, not intelligence feature |

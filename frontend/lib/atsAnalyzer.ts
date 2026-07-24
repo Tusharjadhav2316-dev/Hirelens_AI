@@ -1,4 +1,4 @@
-import { Resume, Experience, Project, Education } from "@/types/resume";
+import { Resume, Experience, Project, Education, Certification, Achievement } from "@/types/resume";
 
 export interface ATSAnalysisResult {
     overallScore: number;
@@ -30,7 +30,7 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
     // Overall modifiers
     let completenessScore = 100;
     let impactScore = 100;
-    let keywordDensityScore = 100; // Placeholder for future use
+    let keywordDensityScore = 100;
 
     // 1. Summary Analysis
     const summary = resume.personalInfo.summary || "";
@@ -58,7 +58,10 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         experienceScore -= 50;
         warnings.push("No work experience listed.");
     } else {
-        const weakVerbs = ["worked", "helped", "did", "assisted", "was responsible for"];
+        const weakVerbs = [
+            "worked", "helped", "did", "assisted", "was responsible for",
+            "handled", "worked on", "participated in", "supported", "contributed to", "tried"
+        ];
         let hasBulletPoints = false;
         let hasNumericValues = false;
         let weakVerbCount = 0;
@@ -118,6 +121,15 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         suggestions.push("Remove duplicate skills and replace them with new relevant keywords.");
     }
 
+    if (skills.length > 0) {
+        const advancedSkillsCount = skills.filter(
+            s => s.level === "Intermediate" || s.level === "Expert"
+        ).length;
+        if (advancedSkillsCount / skills.length < 0.5) {
+            suggestions.push("Most of your skills are listed as Beginner. Consider highlighting more Intermediate or Expert-level skills relevant to your target roles.");
+        }
+    }
+
     // 4. Projects Analysis
     if (resume.projects && resume.projects.length > 0) {
         resume.projects.forEach((proj: Project) => {
@@ -125,8 +137,6 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
                 projectsScore -= 5;
                 suggestions.push(`Consider adding a GitHub or live link to project "${proj.name || 'Unnamed'}".`);
             }
-            // Projects form represents technologies as comma separated string or array. The UI may use an array or we might just check string.
-            // As per type: technologies?: string[]
             const techCount = proj.technologies?.length || 0;
             if (techCount === 0) {
                 projectsScore -= 5;
@@ -148,6 +158,29 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         });
     }
 
+    // 5.5. Certifications & Achievements Analysis
+    if (resume.certifications && resume.certifications.length > 0) {
+        completenessScore = Math.min(100, completenessScore + 5);
+        const hasMissingYear = resume.certifications.some((cert: Certification) => !cert.year || cert.year.trim() === "");
+        if (hasMissingYear) {
+            suggestions.push("Add the year to your certification entries to improve credibility.");
+        }
+    } else {
+        suggestions.push("Consider adding relevant certifications to strengthen your ATS profile.");
+    }
+
+    if (resume.achievements && resume.achievements.length > 0) {
+        impactScore = Math.min(100, impactScore + 5);
+        const hasShortDesc = resume.achievements.some((ach: Achievement) => {
+            const desc = (ach.description || "").trim();
+            const wordCount = desc ? desc.split(/\s+/).length : 0;
+            return wordCount < 20;
+        });
+        if (hasShortDesc) {
+            suggestions.push("Expand your achievement descriptions with measurable impact and context.");
+        }
+    }
+
     // 6. Completeness Analysis
     if (!resume.personalInfo.linkedinUrl) {
         completenessScore -= 5;
@@ -160,6 +193,30 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
     if (!resume.personalInfo.email || !resume.personalInfo.phone || !resume.personalInfo.fullName) {
         completenessScore -= 10;
         warnings.push("Missing critical contact information (Name, Email, or Phone).");
+    }
+
+    // Keyword Density Computation
+    const summaryText = resume.personalInfo.summary || "";
+    const expText = resume.experience ? resume.experience.map(e => e.description || "").join(" ") : "";
+    const projText = resume.projects ? resume.projects.map(p => p.description || "").join(" ") : "";
+    const fullText = `${summaryText} ${expText} ${projText}`.toLowerCase();
+
+    const totalSkillCount = resume.skills ? resume.skills.length : 0;
+    if (totalSkillCount > 0) {
+        let matchedSkillCount = 0;
+        resume.skills.forEach(skill => {
+            const skillName = skill.name.toLowerCase().trim();
+            if (skillName && fullText.includes(skillName)) {
+                matchedSkillCount++;
+            }
+        });
+        keywordDensityScore = Math.min(100, Math.round((matchedSkillCount / totalSkillCount) * 100));
+    } else {
+        keywordDensityScore = 50;
+    }
+
+    if (keywordDensityScore < 50) {
+        suggestions.push("Many of your listed skills don't appear in your experience or project descriptions. Integrate them naturally to improve ATS keyword density.");
     }
 
     // Constraints check to ensure scores don't drop below 0
@@ -216,3 +273,4 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         completenessScore
     };
 }
+

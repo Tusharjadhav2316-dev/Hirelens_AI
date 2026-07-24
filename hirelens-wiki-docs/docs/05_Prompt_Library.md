@@ -16,3 +16,8 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 2 | 5 | Move Firebase config to env vars; full Sprint 2 regression pass | `Sprint_02/Day_05.md` |
 
 > Update this table every time a new `Day_NN.md` is created. Keep "Prompt Topic" to one line — detail lives in the day file.
+| 3 | 1 | Enhance `lib/atsAnalyzer.ts` — certifications/achievements scoring, keyword density, skill levels | `Sprint_03/Day_01.md` |
+| 3 | 2 | Enhance `lib/atsEngine.ts` — remove floor, bigram extraction, quantification, date ranges | `Sprint_03/Day_02.md` |
+| 3 | 3 | Enhance `lib/jdMatcher.ts` — frequency-weighted keywords, required vs preferred, section scoring | `Sprint_03/Day_03.md` |
+| 3 | 4 | Enhance `api/ai-improve/route.ts` — achievements/certifications support, JD context | `Sprint_03/Day_04.md` |
+| 3 | 5 | Create `lib/promptTemplates.ts`, add ai-insights system prompt, centralize shared prompts | `Sprint_03/Day_05.md` |

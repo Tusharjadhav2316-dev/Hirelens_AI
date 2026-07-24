@@ -14,6 +14,7 @@
 |---|---|---|---|---|---|
 | 1 | Project Discovery | 5 | Easy | — | ✅ Complete |
 | 2 | Production Stabilization | 5 | Medium | Sprint 1 | ✅ Complete |
+| 3 | AI Resume Intelligence | 5 | Medium | Sprint 2 | ⬜ Not Started |
 | 3 | Backend Refactoring | 8 | Medium-Hard | Sprint 2 | ⬜ Not Started |
 | 4 | Frontend Refactoring | 8 | Medium | Sprint 2 | ⬜ Not Started |
 | 5 | AI Career Coach UI | 6 | Medium | Sprint 4 | ⬜ Not Started |
@@ -104,3 +105,19 @@
 - Don't expand sprint detail here — open `Sprint_NN/Day_01.md` when a sprint starts.
 - When a sprint completes, change its Status emoji and add a one-line "Actual outcome" note beneath its row.
 - If scope changes mid-project, edit this file first, then regenerate only the affected `Sprint_NN/` days — never silently drift from this document.
+
+### Sprint 3 — AI Resume Intelligence
+**Goal:** Transform HireLens from a "Resume Checker" into a "Resume Intelligence Platform" by improving the accuracy and quality of every AI and scoring layer — no new features, no UI changes, no infrastructure additions.
+**Sequence:** Day 1 atsAnalyzer.ts → Day 2 atsEngine.ts → Day 3 jdMatcher.ts → Day 4 ai-improve route → Day 5 promptTemplates + regression pass.
+**Files changed:**
+- `lib/atsAnalyzer.ts` — certifications/achievements scoring, real keyword density, expanded weak verbs, skill level guidance
+- `lib/atsEngine.ts` — remove artificial floor, bigram extraction, improved quantification regex, date-range year inference
+- `lib/jdMatcher.ts` — frequency-weighted keyword cap, required vs. preferred skill detection, structured section scoring
+- `app/api/ai-improve/route.ts` — achievements and certifications section support, optional JD context
+- `lib/aiService.ts` — type update for new sections, optional JD context parameter
+- `lib/promptTemplates.ts` (**new file**) — centralized prompt architecture
+- `app/api/ai-insights/route.ts` — system prompt added
+- `app/api/jd-refine/route.ts` — shared constants imported
+- `app/api/cover-letter/route.ts` — shared guardrail constants imported
+**Dependencies:** Sprint 2 complete.
+**Expected Outcome:** Honest, accurate, context-aware scores and AI improvements across all HireLens features. No user-facing UI changes.

@@ -65,6 +65,8 @@ flowchart TD
 | 5 | Job Matcher AI insights fetched but never rendered | High | 2026-07-01 | Sprint 2, Day 4 | Rendered `aiInsights` inside its container with full support for the `isRefining` loading state in `JDMatcherPanel.tsx`. |
 | 7 | Firebase config hardcoded in `lib/firebase.ts` | Medium | 2026-07-02 | Sprint 2, Day 5 | Sourced Firebase configuration from process.env.NEXT_PUBLIC_FIREBASE_* client variables. |
 | 8 | Settings navbar link is a dead hash (`#profile`) | Low | 2026-07-01 | Sprint 2, Day 4 | Corrected profile link in `Navbar.tsx` to navigate directly to `/dashboard/settings`. |
+| 9 | `keywordDensityScore` was static placeholder value (100) | Medium | 2026-07-24 | Sprint 3, Day 1 | `keywordDensityScore` in `lib/atsAnalyzer.ts` is now a real computed metric measuring skill keyword matches against resume text. |
+
 
 
 ## Confirmed Technology Boundaries

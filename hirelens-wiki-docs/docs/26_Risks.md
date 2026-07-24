@@ -74,3 +74,29 @@
 ### OpenRouter Billing Exposure Ceiling
 **Description:** The unauthenticated API routes (Confirmed Risk above) could allow abuse — but whether `OPENROUTER_API_KEY` has any spend cap or alerting configured is unknown.
 **Recommended action:** Verify billing alerts/caps on the OpenRouter account as a quick parallel check during Sprint 2, Day 3 (when auth is added) — not a blocker for that day's code work, but worth confirming the same week.
+
+## Sprint 3 Specific Risks
+
+### ~~Builder ATS Scoring Accuracy Deficiencies~~ (Resolved)
+**Description:** `atsAnalyzer.ts` ignored certifications and achievements, ignored skill levels, used inconsistent weak verbs, and had a hardcoded `keywordDensityScore` placeholder (100).
+**Impact:** Scores and suggestions in Resume Builder ATS panel were incomplete and static.
+**Mitigation:** Resolved (Sprint 3, Day 1) by scoring certifications and achievements, adding skill level guidance, expanding weak verbs, and computing real keyword density score.
+**Priority:** Resolved
+
+### ATS Score Changes May Surprise Users (Addressed Sprint 3, Day 2)
+
+**Description:** Removing the 35-point floor in `atsEngine.ts` means users who previously saw "35/100" for a poor resume will now see their actual (lower) score.
+**Impact:** Potentially confusing for users who ran an analysis pre-Sprint 3 and get a lower score post-Sprint 3 for the same document.
+**Mitigation:** The score is now honest — communicate clearly in UI copy that the analyzer has been improved. No code mitigation needed; this is the correct behavior.
+**Priority:** Low (acceptable side effect of accuracy improvement)
+
+### Bigram Keyword Extraction Changes Existing Match Scores
+**Description:** Resumes that previously matched 0 keywords for a multi-word term ("machine learning") now match via bigram even if the full phrase is present.
+**Impact:** Some resumes will show higher Match scores than before for the same input. This is an accuracy improvement, not a bug.
+**Mitigation:** None needed — this is the intended outcome.
+**Priority:** Low (inform users the algorithm is more sophisticated)
+
+### Prompt Template Refactor Could Subtly Change AI Behavior
+**Description:** Centralizing prompt strings means the composed system prompts must exactly match the original intent. Any wording change could subtly shift model behavior.
+**Mitigation:** Day 5 includes a full regression pass across all AI features. The original inline strings are preserved as-is in the templates wherever possible.
+**Priority:** Medium — regression pass is mandatory before calling Sprint 3 complete.
