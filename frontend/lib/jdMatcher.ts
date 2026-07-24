@@ -59,7 +59,6 @@ function extractKeywords(text: string): string[] {
     let normalized = text.toLowerCase();
 
     // 2. Remove punctuation except . + # / (to preserve things like C++, C#, .NET, Node.js, CI/CD)
-    // We replace other non-alphanumeric characters with spaces to avoid joining words
     normalized = normalized.replace(/[^a-z0-9.+#/]/g, ' ');
 
     // 3. Split into words
@@ -67,7 +66,6 @@ function extractKeywords(text: string): string[] {
 
     // 4. Filter and process
     const keywords = words.filter(word => {
-        // Strip trailing punctuation from words (e.g., "react.js," -> "react.js")
         let cleanWord = word;
         while (cleanWord.length > 0 && /^[.+#/]+$/.test(cleanWord.slice(-1))) {
             cleanWord = cleanWord.slice(0, -1);
@@ -78,10 +76,8 @@ function extractKeywords(text: string): string[] {
 
         if (cleanWord.length === 0) return false;
 
-        // Keep technical terms even if short
         if (TECHNICAL_TERMS.has(cleanWord)) return true;
 
-        // Keep recognizable words > 2 chars, not in stop list, and not just numbers/symbols
         if (cleanWord.length > 2 && !STOP_WORDS.has(cleanWord) && /[a-z]/.test(cleanWord)) {
             return true;
         }
@@ -89,9 +85,7 @@ function extractKeywords(text: string): string[] {
         return false;
     });
 
-    // Return unique keywords
     return Array.from(new Set(keywords.map(w => {
-        // Apply the same edge-punctuation cleanup to map output as well
         let cleanWord = w;
         while (cleanWord.length > 0 && /^[.+#/]+$/.test(cleanWord.slice(-1))) {
             cleanWord = cleanWord.slice(0, -1);
@@ -110,11 +104,81 @@ export function formatResumeToText(resume: Resume): string {
     return `${skillsText} ${expText} ${projText} ${resume.personalInfo.summary}`;
 }
 
-export function analyzeJobMatch(resumeText: string, jobDescription: string): JobMatchResult {
-    // Extract JD Keywords
-    let jdKeywords = extractKeywords(jobDescription);
+function splitJDByRequirement(jd: string): { required: string; preferred: string } {
+    const lowerJD = jd.toLowerCase();
+    const patterns = [
+        "preferred qualifications",
+        "preferred skills",
+        "nice to have",
+        "bonus",
+        "desirable",
+        "it's a plus",
+        "what you'll bring"
+    ];
 
-    // Limit to top 80 to prevent excessive bias from extremely long JDs
+    let matchIndex = -1;
+    for (const pattern of patterns) {
+        const index = lowerJD.indexOf(pattern);
+        if (index !== -1) {
+            if (matchIndex === -1 || index < matchIndex) {
+                matchIndex = index;
+            }
+        }
+    }
+
+    if (matchIndex !== -1) {
+        return {
+            required: jd.substring(0, matchIndex),
+            preferred: jd.substring(matchIndex)
+        };
+    }
+
+    return {
+        required: jd,
+        preferred: ""
+    };
+}
+
+export function analyzeJobMatch(resumeText: string, jobDescription: string, resume?: Resume): JobMatchResult {
+    // Split JD into required vs. preferred sections to assign keyword weights
+    const { required, preferred } = splitJDByRequirement(jobDescription);
+    const requiredKeywords = extractKeywords(required);
+    const preferredKeywords = extractKeywords(preferred);
+
+    const keywordWeights = new Map<string, number>();
+    requiredKeywords.forEach(kw => keywordWeights.set(kw, 1.0));
+    preferredKeywords.forEach(kw => {
+        if (!keywordWeights.has(kw)) {
+            keywordWeights.set(kw, 0.5);
+        }
+    });
+
+    const allJdKeywords = Array.from(keywordWeights.keys());
+
+    // Build frequency map from raw job description tokens to prioritize most frequent keywords
+    const rawTokens = jobDescription
+        .toLowerCase()
+        .replace(/[^a-z0-9.+#/]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean);
+
+    const freqMap = new Map<string, number>();
+    rawTokens.forEach(token => {
+        let cleanWord = token;
+        while (cleanWord.length > 0 && /^[.+#/]+$/.test(cleanWord.slice(-1))) {
+            cleanWord = cleanWord.slice(0, -1);
+        }
+        while (cleanWord.length > 0 && /^[.+#/]+$/.test(cleanWord[0])) {
+            cleanWord = cleanWord.slice(1);
+        }
+        if (cleanWord) {
+            freqMap.set(cleanWord, (freqMap.get(cleanWord) || 0) + 1);
+        }
+    });
+
+    allJdKeywords.sort((a, b) => (freqMap.get(b) || 0) - (freqMap.get(a) || 0));
+
+    let jdKeywords = allJdKeywords;
     if (jdKeywords.length > 80) {
         jdKeywords = jdKeywords.slice(0, 80);
     }
@@ -129,39 +193,38 @@ export function analyzeJobMatch(resumeText: string, jobDescription: string): Job
         };
     }
 
-    // We don't have distinct sections from a raw string (e.g., from PDF parse), 
-    // so we approximate or use the overall text for the sub-metrics. 
-    // The main matchScore relies purely on overallText intersection.
     const resumeOverallKV = new Set(extractKeywords(resumeText));
-
-    // Calculate keyword density
     const totalResumeWords = resumeText.split(/\s+/).filter(Boolean).length;
 
-
-    // Match Logic
     const matchedKeywords: string[] = [];
     const missingKeywords: string[] = [];
 
-    let skillsMatches = 0;
-    let expMatches = 0;
-    let projMatches = 0;
+    let weightedMatch = 0;
+    let totalWeight = 0;
 
+    let skillsMatchesFallback = 0;
+    let expMatchesFallback = 0;
+    let projMatchesFallback = 0;
     const totalJD = jdKeywords.length;
 
     for (const kw of jdKeywords) {
+        const weight = keywordWeights.get(kw) || 1.0;
+        totalWeight += weight;
+
         if (resumeOverallKV.has(kw)) {
             matchedKeywords.push(kw);
-            // Rough approximation for section bars since we lost strict structure in raw text. 
-            // This ensures the visual bars still populate beautifully.
-            if (skillsMatches < totalJD * 0.4) skillsMatches++;
-            else if (expMatches < totalJD * 0.4) expMatches++;
-            else projMatches++;
+            weightedMatch += weight;
+
+            if (skillsMatchesFallback < totalJD * 0.4) skillsMatchesFallback++;
+            else if (expMatchesFallback < totalJD * 0.4) expMatchesFallback++;
+            else projMatchesFallback++;
         } else {
             missingKeywords.push(kw);
         }
     }
-    let matchScore = Math.round((matchedKeywords.length / totalJD) * 100);
-    matchScore = Math.min(matchScore, 100); // Cap at 100
+
+    const weightedScore = totalWeight > 0 ? Math.round((weightedMatch / totalWeight) * 100) : 0;
+    const matchScore = Math.min(100, weightedScore);
 
     // Sort matches for display
     matchedKeywords.sort();
@@ -171,15 +234,55 @@ export function analyzeJobMatch(resumeText: string, jobDescription: string): Job
         ? parseFloat(((matchedKeywords.length / totalResumeWords) * 100).toFixed(2))
         : 0;
 
+    let sectionMatch: { skills: number; experience: number; projects: number };
+
+    if (resume) {
+        const jdSet = new Set(jdKeywords);
+
+        // Skills section match
+        const skillsCount = resume.skills ? resume.skills.length : 0;
+        let matchedSkillCount = 0;
+        if (skillsCount > 0) {
+            resume.skills.forEach(s => {
+                const name = s.name.toLowerCase().trim();
+                if (name && jdSet.has(name)) {
+                    matchedSkillCount++;
+                }
+            });
+        }
+        const skillsScore = Math.round((matchedSkillCount / Math.max(1, skillsCount)) * 100);
+
+        // Experience section match
+        const expText = resume.experience ? resume.experience.map(e => e.description || "").join(" ") : "";
+        const expKeywords = extractKeywords(expText);
+        const expMatchedCount = expKeywords.filter(kw => jdSet.has(kw)).length;
+        const experienceScore = expKeywords.length > 0 ? Math.round((expMatchedCount / expKeywords.length) * 100) : 0;
+
+        // Projects section match
+        const projText = resume.projects ? resume.projects.map(p => p.description || "").join(" ") : "";
+        const projKeywords = extractKeywords(projText);
+        const projMatchedCount = projKeywords.filter(kw => jdSet.has(kw)).length;
+        const projectsScore = projKeywords.length > 0 ? Math.round((projMatchedCount / projKeywords.length) * 100) : 0;
+
+        sectionMatch = {
+            skills: skillsScore,
+            experience: experienceScore,
+            projects: projectsScore
+        };
+    } else {
+        sectionMatch = {
+            skills: totalJD > 0 ? Math.round((skillsMatchesFallback / totalJD) * 100) : 0,
+            experience: totalJD > 0 ? Math.round((expMatchesFallback / totalJD) * 100) : 0,
+            projects: totalJD > 0 ? Math.round((projMatchesFallback / totalJD) * 100) : 0
+        };
+    }
+
     return {
         matchScore,
         matchedKeywords,
         missingKeywords,
-        sectionMatch: {
-            skills: totalJD > 0 ? Math.round((skillsMatches / totalJD) * 100) : 0,
-            experience: totalJD > 0 ? Math.round((expMatches / totalJD) * 100) : 0,
-            projects: totalJD > 0 ? Math.round((projMatches / totalJD) * 100) : 0
-        },
+        sectionMatch,
         keywordDensity
     };
 }
+

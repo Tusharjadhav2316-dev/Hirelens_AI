@@ -25,7 +25,7 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 |---|---|---|---|---|---|
 | Score certifications and achievements in atsAnalyzer.ts | High | Done (Sprint 3, Day 1) | Sprint 3, Day 1 | Sprint 2 | `keywordDensityScore` also computed |
 | Remove artificial 35-floor, add bigrams/better quantification in atsEngine.ts | High | Done (Sprint 3, Day 2) | Sprint 3, Day 2 | Sprint 3 Day 1 | |
-| Frequency-weighted JD keywords + required/preferred scoring in jdMatcher.ts | High | Not Started | Sprint 3, Day 3 | Sprint 3 Day 2 | |
+| Frequency-weighted JD keywords + required/preferred scoring in jdMatcher.ts | High | Done (Sprint 3, Day 3) | Sprint 3, Day 3 | Sprint 3 Day 2 | |
 | AI Improve: add achievements/certifications + optional JD context | High | Not Started | Sprint 3, Day 4 | Sprint 3 Day 1 | Also updates `lib/aiService.ts` |
 | Centralize prompts in lib/promptTemplates.ts; fix ai-insights system prompt | Medium | Not Started | Sprint 3, Day 5 | Sprint 3 Day 4 | New file: `lib/promptTemplates.ts` |
 

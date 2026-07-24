@@ -66,6 +66,8 @@ flowchart TD
 | 7 | Firebase config hardcoded in `lib/firebase.ts` | Medium | 2026-07-02 | Sprint 2, Day 5 | Sourced Firebase configuration from process.env.NEXT_PUBLIC_FIREBASE_* client variables. |
 | 8 | Settings navbar link is a dead hash (`#profile`) | Low | 2026-07-01 | Sprint 2, Day 4 | Corrected profile link in `Navbar.tsx` to navigate directly to `/dashboard/settings`. |
 | 9 | `keywordDensityScore` was static placeholder value (100) | Medium | 2026-07-24 | Sprint 3, Day 1 | `keywordDensityScore` in `lib/atsAnalyzer.ts` is now a real computed metric measuring skill keyword matches against resume text. |
+| 10 | JD Matcher section scores were cosmetic bucket-fill approximations | Medium | 2026-07-24 | Sprint 3, Day 3 | Extended `analyzeJobMatch()` in `lib/jdMatcher.ts` with optional `resume?: Resume` parameter for structured section analysis, frequency weighting, and required/preferred skill detection. |
+
 
 
 
