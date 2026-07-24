@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { section, content } = body;
+        const { section, content, jobDescription } = body;
 
         // 1. Validate Input
         if (!content || typeof content !== "string" || content.trim() === "") {
@@ -27,7 +27,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Content exceeds the 2000 character limit." }, { status: 400 });
         }
 
-        const validSections = ["summary", "experience", "projects"];
+        if (jobDescription !== undefined && (typeof jobDescription !== "string" || jobDescription.length > 5000)) {
+            return NextResponse.json({ error: "Job description must be a string under 5000 characters." }, { status: 400 });
+        }
+
+        const validSections = ["summary", "experience", "projects", "achievements", "certifications"];
         if (!section || !validSections.includes(section)) {
             return NextResponse.json({ error: "Invalid section specified." }, { status: 400 });
         }
@@ -40,6 +44,14 @@ export async function POST(req: Request) {
             userPrompt = `Rewrite the experience content to:\n- Use strong action verbs\n- Add quantifiable impact where possible\n- Be concise\n- Preserve original intent\n- Avoid fabricating data\n\n${content}`;
         } else if (section === "projects") {
             userPrompt = `Rewrite the project description to:\n- Emphasize results and technical clarity\n- Improve keyword richness\n- Maintain professionalism\n- Do not fabricate metrics\n\n${content}`;
+        } else if (section === "achievements") {
+            userPrompt = `Rewrite this achievement entry to:\n- Lead with a strong, specific action verb\n- Emphasize measurable impact and tangible results\n- Be concise and recruiter-focused (aim for 1-3 sentences)\n- Preserve all factual content; do not invent or fabricate metrics or outcomes\n\n${content}`;
+        } else if (section === "certifications") {
+            userPrompt = `Review this certification entry and provide a single professional sentence explaining what this certification demonstrates to a recruiter — its relevance, the skill it validates, and the level of expertise implied. Do not modify the certification name, issuer, or year. Only add professional context.\n\n${content}`;
+        }
+
+        if (jobDescription && typeof jobDescription === "string" && jobDescription.trim().length > 0) {
+            userPrompt += "\n\nTarget Job Context (tailor this rewrite for the following role):\n" + jobDescription.substring(0, 1000);
         }
 
         // 3. Call OpenRouter AI
