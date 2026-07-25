@@ -62,3 +62,10 @@
 **Reason:** Prevents prompt drift across routes; makes hallucination guardrails and persona descriptions consistent and testable in one place.
 **Alternatives Considered:** Keep prompts inline but add JSDoc comments (rejected — doesn't prevent drift); create a database-backed prompt management system (rejected — massive over-engineering for current scale).
 **Status:** Accepted
+
+### [Sprint 3, Regression] Introduce Configurable Scoring System (lib/atsConfig.ts) & Centralized ATS Engine
+**Decision:** Create `lib/atsConfig.ts` exporting `ATS_SCORING_CONFIG` with zero magic numbers, and refactor `lib/atsAnalyzer.ts` to delegate scoring rules to `lib/atsEngine.ts`.
+**Reason:** Eliminates hardcoded magic numbers scattered across business logic, unifies scoring across Resume Builder and Resume Analyzer into a single source of truth, filters out non-technical HR boilerplate from missing keywords, and calibrates non-employment experience scoring.
+**Alternatives Considered:** Maintain inline constants in each function (rejected — prone to drift and duplication); external JSON config loaded via network fetch (rejected — unnecessary network overhead for client-side synchronous engine).
+**Status:** Accepted
+

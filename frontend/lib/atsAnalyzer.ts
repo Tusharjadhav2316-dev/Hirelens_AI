@@ -1,4 +1,5 @@
 import { Resume, Experience, Project, Education, Certification, Achievement } from "@/types/resume";
+import { countWeakVerbs, detectQuantification } from "@/lib/atsEngine";
 
 export interface ATSAnalysisResult {
     overallScore: number;
@@ -58,10 +59,6 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         experienceScore -= 50;
         warnings.push("No work experience listed.");
     } else {
-        const weakVerbs = [
-            "worked", "helped", "did", "assisted", "was responsible for",
-            "handled", "worked on", "participated in", "supported", "contributed to", "tried"
-        ];
         let hasBulletPoints = false;
         let hasNumericValues = false;
         let weakVerbCount = 0;
@@ -71,17 +68,12 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
             if (desc.includes("-") || desc.includes("•") || desc.includes("*") || /^\s*[-•*]/m.test(desc)) {
                 hasBulletPoints = true;
             }
-            if (/\d|%|\$|\+/.test(desc)) {
+            if (detectQuantification(desc)) {
                 hasNumericValues = true;
             }
 
-            const lowerDesc = desc.toLowerCase();
-            weakVerbs.forEach(verb => {
-                const regex = new RegExp(`\\b${verb}\\b`, 'i');
-                if (regex.test(lowerDesc)) {
-                    weakVerbCount++;
-                }
-            });
+            const expWeakVerbs = countWeakVerbs(desc);
+            weakVerbCount += expWeakVerbs.length;
         });
 
         if (!hasBulletPoints) {

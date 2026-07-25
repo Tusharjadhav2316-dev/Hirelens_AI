@@ -40,38 +40,61 @@ export async function POST(req: Request) {
         Provide 3-5 concise, highly actionable bullet points on how to improve this resume's ATS score, tone, and ${isMatchMode ? "keyword optimization for this specific job" : "overall formatting quality"}. Focus on the weakest areas identified in the breakdown. Do not use generic advice, be highly specific to the text provided. Only return the bullet points. No markdown formatting other than bullet points (* or -).
         `;
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: "google/gemini-2.0-flash-lite-001",
-                messages: [
-                    { role: "system", content: AI_INSIGHTS_SYSTEM_PROMPT },
-                    { role: "user", content: prompt }
-                ]
-            })
-        });
+        const MODELS = [
+            "google/gemini-2.0-flash-lite-001",
+            "google/gemini-2.0-flash-001",
+            "meta-llama/llama-3.3-70b-instruct"
+        ];
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("OpenRouter API Failed:", response.status, errorText);
-            return NextResponse.json({ error: "Failed to communicate with AI provider." }, { status: 502 });
+        let insights = "";
+        let lastError = "";
+
+        for (const model of MODELS) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model,
+                        messages: [
+                            { role: "system", content: AI_INSIGHTS_SYSTEM_PROMPT },
+                            { role: "user", content: prompt }
+                        ]
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    insights = data.choices?.[0]?.message?.content?.trim() || "";
+                    if (insights) break;
+                } else {
+                    lastError = await response.text();
+                    console.warn(`AI Insights model ${model} failed with status ${response.status}: ${lastError}`);
+                }
+            } catch (modelErr: any) {
+                lastError = modelErr.message || String(modelErr);
+                console.warn(`AI Insights model ${model} attempt threw error:`, lastError);
+            }
         }
 
-        const data = await response.json();
-        const insights = data.choices?.[0]?.message?.content?.trim();
-
         if (!insights) {
-            return NextResponse.json({ error: "AI returned an empty response." }, { status: 500 });
+            console.error("AI Insights All Models Failed. Last Error:", lastError);
+            return NextResponse.json({ error: "Unable to generate AI Insights at this moment. Please try again shortly." }, { status: 502 });
         }
 
         return NextResponse.json({ insights });
 
     } catch (error) {
-        console.error("AI Insights Error:", error);
+        console.error("AI Insights Fatal Error:", error);
         return NextResponse.json({ error: "An unexpected error occurred processing your request." }, { status: 500 });
     }
 }
