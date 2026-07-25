@@ -191,6 +191,8 @@ export function calculateExperienceClarity(resumeText: string): number {
     const hasWorkExperience = (/\b(?:work\s+experience|professional\s+experience|employment\s+history|work\s+history|career\s+history)\b/i.test(resumeText) ||
         /\b(?:software\s+engineer|developer|manager|analyst|consultant|specialist|architect|engineer|administrator)\b/i.test(employmentText)) && !hasOnlyInternships;
 
+    const hasLeadership = /\b(?:leadership|president|vice\s+president|lead|head|captain|chair|founder|co-founder)\b/i.test(resumeText);
+
     // Component 1: Type & Breadth
     let typeScore = 0;
     if (hasWorkExperience) {
@@ -206,6 +208,9 @@ export function calculateExperienceClarity(resumeText: string): number {
     if (hasProjects) {
         const projectBoost = hasWorkExperience ? cfg.projectsWithWorkBoost : (hasInternship || hasFreelance || hasResearch ? cfg.projectsWithInternshipBoost : cfg.projectsOnlyBase);
         typeScore += projectBoost;
+    }
+    if (hasLeadership && !hasWorkExperience) {
+        typeScore += 5;
     }
     typeScore = Math.min(cfg.typeMax, typeScore);
 
@@ -378,7 +383,7 @@ export function detectExperienceSection(text: string): boolean {
 }
 
 export function detectQuantification(text: string): boolean {
-    return /(\d+[xX×]|\d+%|\+\d+%|\$[\d,.]+[KkMmBb]?|\b(?:doubled|tripled|quadrupled)\b|\d+\s*(?:users|clients|revenue|dollars|projects|systems|teams|engineers|features|releases|services|applications))/i.test(text);
+    return /(\d+[xX×]|\d+%|\+\d+%|\$[\d,.]+[KkMmBb]?|\b\d+[\d,.]*\+|\b(?:doubled|tripled|quadrupled)\b|\d+[\d,.]*\s*(?:\w+\s+){0,2}(?:users|clients|customers|revenue|dollars|projects|systems|teams|engineers|features|releases|services|applications|updates|requests|transactions|events|records|downloads|stars|workshops|members|students))/i.test(text);
 }
 
 export function countWeakVerbs(text: string): string[] {
