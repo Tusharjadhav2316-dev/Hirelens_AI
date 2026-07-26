@@ -16,3 +16,7 @@ export const AI_INSIGHTS_SYSTEM_PROMPT = [
   HALLUCINATION_GUARDRAIL,
   OUTPUT_FORMAT_BULLETS
 ].join(" ");
+
+export const AI_IMPROVE_MODEL_PARAMS = { max_tokens: 400, temperature: 0.3 };
+export const AI_INSIGHTS_MODEL_PARAMS = { max_tokens: 500, temperature: 0.4 };
+export const AI_JD_REFINE_MODEL_PARAMS = { max_tokens: 700, temperature: 0.4 };

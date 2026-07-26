@@ -69,3 +69,34 @@
 **Alternatives Considered:** Maintain inline constants in each function (rejected — prone to drift and duplication); external JSON config loaded via network fetch (rejected — unnecessary network overhead for client-side synchronous engine).
 **Status:** Accepted
 
+
+### [Sprint 4, Day 1] Activate Sprint 3's structured section scoring by fixing JDMatcherPanel call site
+**Decision:** Fix `JDMatcherPanel.tsx` to pass the `resume` object to `analyzeJobMatch()` as the third (optional) parameter that Sprint 3 added.
+**Reason:** The structured section scoring (skills/experience/projects bars showing real content analysis) was computed but never activated because the call site was never updated.
+**Alternatives Considered:** Remove the optional parameter and always use the resume object (rejected — the fallback is still useful for the PDF-only mode in JDMatcherPanel where the Resume object isn't available).
+**Status:** Accepted
+
+### [Sprint 4, Day 1] Replace jdMatcher.ts local STOP_WORDS with MASTER_STOP_WORDS from atsConfig.ts
+**Decision:** Remove the local `STOP_WORDS` set from `jdMatcher.ts` and import `MASTER_STOP_WORDS` from `atsConfig.ts`.
+**Reason:** Eliminates inconsistent keyword extraction behavior between the Resume Analyzer (atsEngine.ts using MASTER_STOP_WORDS) and the Job Matcher (jdMatcher.ts using its own smaller set).
+**Alternatives Considered:** Merge both sets into one and export from atsConfig.ts (this is exactly what was done — MASTER_STOP_WORDS was already the merged set).
+**Status:** Accepted
+
+### [Sprint 4, Day 3] Graduate impact and skills scores from binary to 4-tier
+**Decision:** Replace binary impact (100/20) and skills (100/20) scoring in Quality mode with 4-tier graduated scales.
+**Reason:** Binary scoring fails to differentiate a resume with 1 metric from one with 8, or a skills section with 2 skills from one with 15. Recruiters make these distinctions easily.
+**Alternatives Considered:** 3-tier scale (low/medium/high) — rejected in favour of 4-tier which maps more precisely to the Concepts section benchmarks and avoids the 1-metric resume scoring identically to the 3-metric one.
+**Status:** Accepted
+
+### [Sprint 4, Day 4] Word-boundary regex for skill names ≤ 3 characters in keyword density
+**Decision:** Use `new RegExp('\\b' + escapeRegexChars(name) + '\\b', 'i')` for short skill names and `.includes()` for longer ones.
+**Reason:** Short names ("Go", "R", "C", "AWS") false-positive via substring matching against common English words. Longer names (4+ chars) are safe with substring.
+**Alternatives Considered:** Use word-boundary regex for ALL skill names (rejected — unnecessary overhead and risk of regex edge cases for very long strings; .includes() is safe and fast for names ≥ 4 chars).
+**Status:** Accepted
+
+### [Sprint 4, Day 5] Add max_tokens and temperature to all AI routes via shared promptTemplates.ts constants
+**Decision:** Add route-specific `max_tokens` and `temperature` constants to `promptTemplates.ts`; spread into each route's OpenRouter fetch body.
+**Reason:** No max_tokens = potentially runaway responses; no temperature = model default (often 1.0) = more random, less deterministic output for tasks requiring factual accuracy.
+**Values:** improve: max_tokens 400, temp 0.3; insights: max_tokens 500, temp 0.4; jd-refine: max_tokens 700, temp 0.4.
+**Alternatives Considered:** Hardcode in each route (rejected — centralization via promptTemplates.ts maintains the pattern established in Sprint 3).
+**Status:** Accepted

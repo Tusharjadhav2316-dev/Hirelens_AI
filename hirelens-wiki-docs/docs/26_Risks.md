@@ -100,3 +100,17 @@
 **Description:** Centralizing prompt strings means the composed system prompts must exactly match the original intent. Any wording change could subtly shift model behavior.
 **Mitigation:** Day 5 includes a full regression pass across all AI features. The original inline strings are preserved as-is in the templates wherever possible.
 **Priority:** Medium — regression pass is mandatory before calling Sprint 3 complete.
+
+## Sprint 4 Specific Risks
+
+### Day 3 Benchmark Score Drift
+**Description:** Graduating binary impact/skills scores changes the Quality mode total scores for all benchmark profiles.
+**Impact:** If any two benchmark profiles swap ordering after the change, quality hierarchy assertions will fail.
+**Mitigation:** The benchmark resumes are well-differentiated (Education Only has zero metrics; 3+ Year Pro has 8+). Score ordering should be preserved. If an assertion fails, it will be caught immediately via the regression run and the expected values table in BENCHMARK_REGRESSION.md updated.
+**Priority:** Low (expected to pass; regression suite will catch any issue immediately)
+
+### Day 5 max_tokens Truncation Risk
+**Description:** Setting max_tokens: 400 for ai-improve may truncate a very long section rewrite for complex experience entries.
+**Impact:** The user sees an incomplete sentence in the AIImprovementModal.
+**Mitigation:** If observed during Day 5 testing, raise AI_IMPROVE_MODEL_PARAMS.max_tokens to 500 — a one-line change in promptTemplates.ts.
+**Priority:** Low (one-line fix if it occurs)

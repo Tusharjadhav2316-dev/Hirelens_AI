@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
-import { ATS_EXPERT_PERSONA, HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN } from "@/lib/promptTemplates";
+import { ATS_EXPERT_PERSONA, HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN, AI_JD_REFINE_MODEL_PARAMS } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
                 model: "google/gemini-2.0-flash-lite-001",
+                ...AI_JD_REFINE_MODEL_PARAMS,
                 messages: [
                     {
                         role: "system",

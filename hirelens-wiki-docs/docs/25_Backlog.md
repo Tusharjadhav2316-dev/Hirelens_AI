@@ -37,3 +37,25 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Word (.docx) export implementation | Feature work, already in backlog from Sprint 2 |
 | Firestore security rules audit | Security concern, not intelligence feature |
 | `ResumeContext` re-render performance | Performance concern, not intelligence feature |
+
+## Sprint 4 Items
+| Feature | Priority | Status | Sprint | Dependencies | Notes |
+|---|---|---|---|---|---|
+| Wire `resume` param to `analyzeJobMatch()` in JDMatcherPanel | Critical (bug) | Done (Sprint 4, Day 1) | Sprint 4, Day 1 | Sprint 3 | Sprint 3's structured section scoring was never activated |
+| Unify stop word sets (jdMatcher → MASTER_STOP_WORDS) | High | Done (Sprint 4, Day 1) | Sprint 4, Day 1 | Sprint 3 | Inconsistency between engines |
+| Display Resume Intelligence signals in ATSScorePanel | High | Done (Sprint 4, Day 2) | Sprint 4, Day 2 | Sprint 3 | keywordDensityScore/impactScore/completenessScore computed but invisible |
+| Graduate impact score in Quality mode (4 tiers) | High | Done (Sprint 4, Day 3) | Sprint 4, Day 3 | Sprint 3 | Binary 100/20 → 20/55/80/100 |
+| Graduate skills score in Quality mode (4 tiers) | High | Done (Sprint 4, Day 3) | Sprint 4, Day 3 | Sprint 3 | Binary 100/20 → 20/60/80/100 |
+| Extract calculateFormattingScore() shared helper | Medium | Done (Sprint 4, Day 3) | Sprint 4, Day 3 | Sprint 3 | Identical code duplicated in Quality + Match modes |
+| Word-boundary matching for short skill names in atsAnalyzer | Medium | Done (Sprint 4, Day 4) | Sprint 4, Day 4 | Sprint 3 | "Go" false-matching "going"/"good" |
+| Java Full Stack JD benchmark expansion | Medium | Done (Sprint 4, Day 4) | Sprint 4, Day 4 | Sprint 3 | Defined but never tested in runBenchmarkSuite() |
+| max_tokens + temperature on all AI routes | Medium | Done (Sprint 4, Day 5) | Sprint 4, Day 5 | Sprint 3 | No response length control; no temperature set |
+| Clean duplicate persona from ai-insights user prompt | Low | Done (Sprint 4, Day 5) | Sprint 4, Day 5 | Sprint 3 | "You are an expert..." duplicated in user message |
+
+## Deferred from Sprint 4 (candidates for Sprint 5)
+| Feature | Reason Deferred |
+|---|---|
+| Cover letter prompt full centralization | Complex (5 distinct prompt variants); deferred from Sprint 3, still deferred |
+| Semantic/embedding-based ATS matching | Requires new API or library; not client-side computable without new infrastructure |
+| Firestore security rules audit | Security concern not in ATS/intelligence scope |
+| ResumeContext memoization | Performance concern, not ATS/intelligence concern |

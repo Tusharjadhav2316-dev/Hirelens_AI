@@ -54,9 +54,15 @@
 **Goal:** Move CPU-bound PDF parsing off the event loop, restructure services per the audit's target `backend/app/` layout, introduce Pydantic-validated request/response schemas everywhere.
 **Deliverables:** `AsyncDocumentParser` with thread-pool executor, `schemas/` fully typed, prompt-injection mitigation on all LLM-facing string construction.
 
-### Sprint 4 — Frontend Refactoring
-**Goal:** Replace prop-drilling/Context with Zustand, fix the Axios refresh-token race condition, establish component library conventions.
-**Deliverables:** `store/` with selector-based Zustand stores, single-flight token refresh, shared UI primitives.
+### Sprint 4 — Scoring Engine Hardening, Intelligence Signal Visibility & Serverless AI Optimization
+**Status:** ✅ Complete
+**Goal:** Transform HireLens into a recruiter-level ATS platform by fixing confirmed scoring gaps, surfacing hidden intelligence signals, unifying scoring engines, expanding benchmark suites, and hardening AI route token/parameter controls.
+**Actual Outcome:**
+- Day 1: Wired `resume` param to `analyzeJobMatch()` in `JDMatcherPanel.tsx`, activating structured section scoring (skills %, experience %, projects %). Unified stop word sets with `MASTER_STOP_WORDS`.
+- Day 2: Surfaced `keywordDensityScore`, `impactScore`, and `completenessScore` in `ATSScorePanel.tsx` in a new "Resume Intelligence" section with color-coded progress bars.
+- Day 3: Extracted `calculateFormattingScore()` helper in `atsEngine.ts`. Graduated `impactScore` (20/55/80/100) and `skillsScore` (20/60/80/100) into granular 4-tier metrics.
+- Day 4: Added word-boundary regex (`/\b<skill>\b/i`) matching for short skills ($\le 3$ chars) in `atsAnalyzer.ts` (preventing "Go" matching "going"). Expanded `atsBenchmark.test.ts` to execute and verify `BENCHMARK_JDS.javaFullStack`.
+- Day 5: Added model parameters (`max_tokens` & `temperature`) across all serverless AI routes (`ai-improve`, `ai-insights`, `jd-refine`). Cleaned redundant persona preamble from `ai-insights` user message prompt. All 6 benchmark sections passed cleanly. Production build (`npm run build`) succeeded with 0 errors.
 
 ### Sprint 5 — AI Career Coach UI
 **Goal:** Build the conversational shell (chat pane, suggestions, upload affordances) — UI only, no live agent yet.
@@ -116,3 +122,21 @@
 - Day 5: Created `lib/promptTemplates.ts` as canonical prompt store, added system prompt to `/api/ai-insights`, aligned prompt guardrails across routes, and completed full regression verification.
 **Deliverables:** See `Sprint_03/Day_01.md` through `Day_05.md`.
 
+
+### Sprint 4 — Advanced ATS Intelligence & Resume Quality Refinement
+**Goal:** Fix confirmed scoring gaps, surface hidden intelligence signals, unify keyword engines, and harden the AI layer — zero new features, no UI redesign.
+**Sequence:** Day 1 JDMatcherPanel wire-up + stop word unification → Day 2 ATSScorePanel intelligence signals display → Day 3 graduate binary scores + extract format helper → Day 4 keyword density false-positive fix + Java benchmark expansion → Day 5 AI route model params + Sprint 4 regression.
+**Files changed:**
+- `components/resume-builder/JDMatcherPanel.tsx` — pass `resume` to `analyzeJobMatch()`
+- `lib/jdMatcher.ts` — replace local STOP_WORDS with MASTER_STOP_WORDS
+- `components/resume-builder/ATSScorePanel.tsx` — display keywordDensityScore, impactScore, completenessScore
+- `lib/atsEngine.ts` — graduated impact/skills scores, extract calculateFormattingScore()
+- `lib/atsAnalyzer.ts` — word-boundary matching for short skill names
+- `tests/atsBenchmark.test.ts` — Java Full Stack JD benchmark added
+- `docs/BENCHMARK_REGRESSION.md` — updated with Java Full Stack scores
+- `lib/promptTemplates.ts` — model parameter constants added
+- `app/api/ai-insights/route.ts` — user prompt cleaned, model params added
+- `app/api/ai-improve/route.ts` — model params added
+- `app/api/jd-refine/route.ts` — model params added
+**Dependencies:** Sprint 3 complete.
+**Expected Outcome:** Scores are accurate and recruiter-aligned; intelligence signals are visible; AI responses are consistently-lengthed and cost-controlled.

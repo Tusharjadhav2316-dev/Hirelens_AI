@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
-import { AI_INSIGHTS_SYSTEM_PROMPT } from "@/lib/promptTemplates";
+import { AI_INSIGHTS_SYSTEM_PROMPT, AI_INSIGHTS_MODEL_PARAMS } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -26,8 +26,7 @@ export async function POST(req: Request) {
         const isMatchMode = mode === "Match" && jobDescription;
 
         const prompt = `
-        You are an expert ATS optimizer and career coach.
-        You have been given a candidate's resume text, ${isMatchMode ? "a target job description," : ""} and their current ATS scoring breakdown based on a ${mode} mode analysis.
+        Analyze the following resume and ATS breakdown. Provide 3-5 concise, highly actionable improvement suggestions targeting the weakest areas shown in the ATS scoring breakdown.
         
         Resume:
         ${resumeText.substring(0, 3000)}...
@@ -62,6 +61,7 @@ export async function POST(req: Request) {
                     },
                     body: JSON.stringify({
                         model,
+                        ...AI_INSIGHTS_MODEL_PARAMS,
                         messages: [
                             { role: "system", content: AI_INSIGHTS_SYSTEM_PROMPT },
                             { role: "user", content: prompt }

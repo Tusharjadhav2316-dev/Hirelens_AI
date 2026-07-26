@@ -1,4 +1,6 @@
 import { analyzeResumeQuality, analyzeResumeMatch } from "../lib/atsEngine";
+import { analyzeResume } from "../lib/atsAnalyzer";
+import { Resume } from "../types/resume";
 
 // ----------------------------------------------------------------------------
 // BENCHMARK REGRESSION TEST SUITE FOR ATS & RESUME QUALITY SCORING ENGINES
@@ -186,6 +188,80 @@ export function runBenchmarkSuite() {
     console.log(`   3-5 Yrs AI Pro on AI Engineer JD      : Match ${m6_ai.finalScore} (Keyword Score: ${m6_ai.breakdown[0].score}, Exp: ${m6_ai.breakdown[2].score})`);
 
     console.log("   ✓ AI Engineer ATS Match correctly scores AI-focused projects above non-AI Java resumes!");
+
+    console.log("\n4. Java Full Stack JD ATS Match Verification:");
+    const m4_java = analyzeResumeMatch(BENCHMARK_RESUMES.internship, BENCHMARK_JDS.javaFullStack);
+    const m5_java = analyzeResumeMatch(BENCHMARK_RESUMES.oneToTwoYearsPro, BENCHMARK_JDS.javaFullStack);
+    const m6_java = analyzeResumeMatch(BENCHMARK_RESUMES.threePlusYearsProQuantified, BENCHMARK_JDS.javaFullStack);
+    const m2_java = analyzeResumeMatch(BENCHMARK_RESUMES.projectsOnly, BENCHMARK_JDS.javaFullStack);
+
+    console.log(`   Internship (Java/Spring)         : Match ${m4_java.finalScore} (Keyword: ${m4_java.breakdown[0].score}, Exp: ${m4_java.breakdown[2].score})`);
+    console.log(`   1-2 Yrs Pro (Java/Spring)        : Match ${m5_java.finalScore} (Keyword: ${m5_java.breakdown[0].score}, Exp: ${m5_java.breakdown[2].score})`);
+    console.log(`   3-5 Yrs Senior Full Stack        : Match ${m6_java.finalScore} (Keyword: ${m6_java.breakdown[0].score}, Exp: ${m6_java.breakdown[2].score})`);
+    console.log(`   AI Projects (Python focus)       : Match ${m2_java.finalScore} (Keyword: ${m2_java.breakdown[0].score}, Exp: ${m2_java.breakdown[2].score})`);
+
+    console.assert(m4_java.finalScore < m5_java.finalScore, "Internship should score lower than 1-2 Yrs Pro on Java JD");
+    console.assert(m5_java.finalScore < m6_java.finalScore, "1-2 Yrs Pro should score lower than 3+ Yrs Senior on Java JD");
+    console.assert(m2_java.breakdown[0].score < m4_java.breakdown[0].score, "AI-focused Projects should have lower keyword match than Java Internship for Java JD");
+    console.log("   ✓ Java Full Stack hierarchy assertions passed!");
+
+    console.log("\n5. Multi-Word Skills Scoring Verification:");
+    const multiWordSkillsResume = `
+Jane Doe
+Email: jane@example.com
+
+EDUCATION
+BS in Computer Science
+
+TECHNICAL SKILLS
+Machine Learning, Spring Boot, REST API, Google Gemini API
+    `;
+    const qMulti = analyzeResumeQuality(multiWordSkillsResume);
+    const skillsScoreItem = qMulti.breakdown.find(b => b.label === "Skills Coverage");
+    const skillsScoreValue = skillsScoreItem ? skillsScoreItem.score : 0;
+    console.log(`   4 Multi-Word Skills Resume : Skills Score ${skillsScoreValue} / 100 (Expected: 60 for <5 skills, NOT 80)`);
+    console.assert(skillsScoreValue === 60, `Multi-word skills regression failed: expected skillsScore 60 for 4 skills, got ${skillsScoreValue}`);
+    console.log("   ✓ Multi-word skills correctly counted as 4 skills (Tier < 5 -> score 60)!");
+
+    console.log("\n6. Short Skill Word-Boundary Matching Verification (atsAnalyzer.ts):");
+    const goFalseResume: Resume = {
+        personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Going forward, I will use Google tools and ship via cargo." },
+        experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Going forward, I will manage Google infrastructure and ship cargo." }],
+        education: [],
+        skills: [{ id: "s1", name: "Go", level: "Intermediate" }],
+        projects: []
+    };
+    const resGoFalse = analyzeResume(goFalseResume);
+    console.log(`   'Go' on 'going/google/cargo' text  : Keyword Density ${resGoFalse.keywordDensityScore} / 100 (Expected: 0)`);
+    console.assert(resGoFalse.keywordDensityScore === 0, `Skill 'Go' should NOT match 'going', 'google', or 'cargo'. Got ${resGoFalse.keywordDensityScore}`);
+
+    const goTrueResume: Resume = {
+        personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Engineered scalable microservices in Go." },
+        experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Developed backend APIs in Go and PostgreSQL." }],
+        education: [],
+        skills: [{ id: "s1", name: "Go", level: "Intermediate" }],
+        projects: []
+    };
+    const resGoTrue = analyzeResume(goTrueResume);
+    console.log(`   'Go' on standalone 'Go' text        : Keyword Density ${resGoTrue.keywordDensityScore} / 100 (Expected: 100)`);
+    console.assert(resGoTrue.keywordDensityScore === 100, `Skill 'Go' SHOULD match standalone 'Go'. Got ${resGoTrue.keywordDensityScore}`);
+
+    const shortSkillsResume: Resume = {
+        personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Data analysis in R, systems programming in C, cloud infrastructure on AWS." },
+        experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Statistical models in R, kernel modules in C, deployed on AWS." }],
+        education: [],
+        skills: [
+            { id: "s1", name: "R", level: "Intermediate" },
+            { id: "s2", name: "C", level: "Intermediate" },
+            { id: "s3", name: "AWS", level: "Intermediate" }
+        ],
+        projects: []
+    };
+    const resShortSkills = analyzeResume(shortSkillsResume);
+    console.log(`   Short skills ('R', 'C', 'AWS') text : Keyword Density ${resShortSkills.keywordDensityScore} / 100 (Expected: 100)`);
+    console.assert(resShortSkills.keywordDensityScore === 100, `Short skills 'R', 'C', 'AWS' SHOULD match standalone tokens. Got ${resShortSkills.keywordDensityScore}`);
+
+    console.log("   ✓ All short skill word-boundary matching assertions passed!");
     console.log("=====================================================");
 }
 
