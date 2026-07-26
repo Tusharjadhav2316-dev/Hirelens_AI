@@ -132,7 +132,7 @@ export default function JDMatcherPanel({ resume }: JDMatcherPanelProps) {
 
         setIsAnalyzing(true);
         setTimeout(async () => {
-            const result = analyzeJobMatch(targetTextToAnalyze, jobDescription);
+            const result = analyzeJobMatch(targetTextToAnalyze, jobDescription, resume);
             setMatchResult(result);
             setAiInsights(null);
             setAiError(null);

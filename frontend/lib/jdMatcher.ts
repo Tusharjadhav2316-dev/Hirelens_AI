@@ -1,4 +1,5 @@
 import { Resume } from "@/types/resume";
+import { MASTER_STOP_WORDS } from "@/lib/atsConfig";
 
 export interface JobMatchResult {
     matchScore: number;
@@ -11,29 +12,6 @@ export interface JobMatchResult {
     };
     keywordDensity: number;
 }
-
-const STOP_WORDS = new Set([
-    "the", "and", "a", "to", "of", "in", "i", "is", "that", "it", "on", "you",
-    "this", "for", "but", "with", "are", "have", "be", "at", "or", "as", "was",
-    "so", "if", "out", "not", "we", "my", "your", "can", "about", "which",
-    "there", "from", "will", "would", "what", "all", "been", "has", "do",
-    "by", "they", "more", "an", "who", "when", "how", "up", "their", "them",
-    "some", "like", "our", "into", "just", "we", "then", "very", "were", "go",
-    "only", "also", "no", "other", "could", "any", "he", "she", "him", "her",
-    "has", "had", "should", "those", "these", "did", "does", "done", "doing",
-    "am", "many", "such", "well", "being", "say", "said", "says", "see",
-    "saw", "seen", "look", "looks", "looking", "use", "uses", "used", "using",
-    "make", "makes", "made", "making", "take", "takes", "took", "taken",
-    "get", "gets", "got", "getting", "work", "works", "worked", "working",
-    "must", "need", "needs", "needed", "want", "wants", "wanted", "job",
-    "role", "candidate", "responsibilities", "requirements", "qualifications",
-    "years", "experience", "required", "preferred", "plus", "understanding",
-    "knowledge", "strong", "excellent", "good", "ability", "able", "skills",
-    "team", "environment", "support", "help", "provide", "including",
-    "within", "ensure", "maintain", "develop", "create", "build", "manage",
-    "lead", "design", "implement", "test", "deploy", "review", "analyze",
-    "resolve", "improve", "optimize", "deliver", "execute", "drive"
-]);
 
 // Preserve compound technical terms that might otherwise be split or removed
 const TECHNICAL_TERMS = new Set([
@@ -78,7 +56,7 @@ function extractKeywords(text: string): string[] {
 
         if (TECHNICAL_TERMS.has(cleanWord)) return true;
 
-        if (cleanWord.length > 2 && !STOP_WORDS.has(cleanWord) && /[a-z]/.test(cleanWord)) {
+        if (cleanWord.length > 2 && !MASTER_STOP_WORDS.has(cleanWord) && /[a-z]/.test(cleanWord)) {
             return true;
         }
 
