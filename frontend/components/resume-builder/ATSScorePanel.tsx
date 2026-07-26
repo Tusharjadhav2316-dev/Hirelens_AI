@@ -7,7 +7,7 @@ interface ATSScorePanelProps {
 }
 
 export default function ATSScorePanel({ result }: ATSScorePanelProps) {
-    const { overallScore, sectionScores, warnings, suggestions } = result;
+    const { overallScore, sectionScores, warnings, suggestions, keywordDensityScore, impactScore, completenessScore } = result;
 
     const getColorClass = (score: number) => {
         if (score < 50) return "text-red-500";
@@ -38,6 +38,24 @@ export default function ATSScorePanel({ result }: ATSScorePanelProps) {
         { name: "Skills", score: sectionScores.skills },
         { name: "Projects", score: sectionScores.projects },
         { name: "Education", score: sectionScores.education },
+    ];
+
+    const intelligenceSignals = [
+        {
+            name: "Keyword Integration",
+            subtitle: "Skills mentioned in your experience & projects",
+            score: keywordDensityScore,
+        },
+        {
+            name: "Impact & Metrics",
+            subtitle: "Quantified achievements in your content",
+            score: impactScore,
+        },
+        {
+            name: "Profile Completeness",
+            subtitle: "Contact info, LinkedIn, certifications",
+            score: completenessScore,
+        },
     ];
 
     let bannerText = "";
@@ -153,6 +171,29 @@ export default function ATSScorePanel({ result }: ATSScorePanelProps) {
                     </ul>
                 </div>
             )}
+
+            <div className="mt-4">
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-4 px-1">Resume Intelligence</h3>
+                <div className="space-y-4">
+                    {intelligenceSignals.map((item) => (
+                        <div key={item.name}>
+                            <div className="flex justify-between items-start text-xs mb-1 px-1">
+                                <div>
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium block">{item.name}</span>
+                                    <span className="text-xs text-slate-500 block">{item.subtitle}</span>
+                                </div>
+                                <span className={`font-semibold ${getColorClass(item.score)}`}>{item.score}%</span>
+                            </div>
+                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-700 ease-out ${getBgColorClass(item.score)}`}
+                                    style={{ width: `${Math.max(0, Math.min(100, item.score))}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
         </div>
     );
