@@ -378,6 +378,62 @@ export function detectSkillsSection(text: string): boolean {
     return /\b(?:skills|technologies|tools|competencies)\b/i.test(text);
 }
 
+export function extractSkillsText(resumeText: string): string {
+    const lines = resumeText.split(/\r?\n/);
+    let inSkillsSection = false;
+    const skillsLines: string[] = [];
+
+    const SKILLS_HEADER_REGEX = /^\s*(?:technical\s+skills|skills|technologies|tools\s+&\s+technologies|core\s+competencies|competencies)\b/i;
+    const OTHER_SECTION_HEADER_REGEX = /^\s*(?:education|academic\s+background|work\s+experience|professional\s+experience|employment\s+history|experience|projects|academic\s+projects|personal\s+projects|certifications|awards|summary|professional\s+summary)\b/i;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        if (SKILLS_HEADER_REGEX.test(trimmed)) {
+            inSkillsSection = true;
+            const colonIndex = trimmed.indexOf(":");
+            if (colonIndex !== -1 && colonIndex < trimmed.length - 1) {
+                skillsLines.push(trimmed.substring(colonIndex + 1));
+            }
+            continue;
+        }
+
+        if (inSkillsSection) {
+            if (OTHER_SECTION_HEADER_REGEX.test(trimmed)) {
+                break;
+            }
+            skillsLines.push(line);
+        }
+    }
+
+    return skillsLines.join("\n");
+}
+
+export function countSkillEntries(skillsText: string): number {
+    if (!skillsText || !skillsText.trim()) return 0;
+
+    const cleanedText = skillsText.replace(/(?:technical\s+skills|languages|frameworks|tools|technologies|databases|platforms|competencies|libraries|devops|cloud|ai\/ml|other)[:\s]+/gi, ", ");
+    const rawEntries = cleanedText.split(/[,|;•·*\n]+/);
+
+    const validEntries = new Set<string>();
+    for (const raw of rawEntries) {
+        let entry = raw.trim();
+        entry = entry.replace(/^[^a-zA-Z0-9+#.]+|[^a-zA-Z0-9+#.]+$ /g, "").trim();
+
+        if (entry.length >= 2 && /[a-zA-Z0-9]/.test(entry)) {
+            validEntries.add(entry.toLowerCase());
+        }
+    }
+
+    if (validEntries.size === 1 && Array.from(validEntries)[0].includes(" ")) {
+        const extracted = extractKeywords(skillsText);
+        return Math.max(validEntries.size, extracted.length);
+    }
+
+    return validEntries.size;
+}
+
 export function detectExperienceSection(text: string): boolean {
     return /\b(?:experience|employment|work history)\b/i.test(text);
 }
@@ -397,23 +453,8 @@ export function countWeakVerbs(text: string): string[] {
     return flags;
 }
 
-// ----------------------------------------------------------------------------
-// MODE 1: RESUME QUALITY SCORE (NO JD REQUIRED)
-// ----------------------------------------------------------------------------
-export function analyzeResumeQuality(resumeText: string): ATSResult {
-    if (!resumeText || resumeText.trim().length === 0) {
-        return {
-            mode: "Quality",
-            finalScore: 0,
-            breakdown: [],
-            flags: { missingKeywords: [], weakVerbs: [], noQuantification: false, lowWordCount: false, missingEducation: false, experienceGap: false }
-        };
-    }
-
+export function calculateFormattingScore(resumeText: string, includeQuantificationCheck: boolean = false): { score: number; lowWordCount: boolean } {
     const cfg = ATS_SCORING_CONFIG.formatting;
-    const weights = ATS_SCORING_CONFIG.qualityWeights;
-
-    // 1. Formatting & Structure
     let formatScore = cfg.baseScore;
     const lowWordCount = resumeText.length < cfg.lowWordCountThreshold;
 
@@ -432,20 +473,53 @@ export function analyzeResumeQuality(resumeText: string): ATSResult {
 
     if (!detectExperienceSection(resumeText)) formatScore -= cfg.noExperienceSectionDeduction;
 
-    formatScore = Math.min(100, Math.max(0, formatScore));
+    if (includeQuantificationCheck && !detectQuantification(resumeText)) formatScore -= cfg.noQuantificationDeduction;
+
+    return { score: Math.min(100, Math.max(0, formatScore)), lowWordCount };
+}
+
+// ----------------------------------------------------------------------------
+// MODE 1: RESUME QUALITY SCORE (NO JD REQUIRED)
+// ----------------------------------------------------------------------------
+export function analyzeResumeQuality(resumeText: string): ATSResult {
+    if (!resumeText || resumeText.trim().length === 0) {
+        return {
+            mode: "Quality",
+            finalScore: 0,
+            breakdown: [],
+            flags: { missingKeywords: [], weakVerbs: [], noQuantification: false, lowWordCount: false, missingEducation: false, experienceGap: false }
+        };
+    }
+
+    const weights = ATS_SCORING_CONFIG.qualityWeights;
+
+    // 1. Formatting & Structure
+    const { score: formatScore, lowWordCount } = calculateFormattingScore(resumeText, false);
 
     // 2. Experience Clarity
     const expScore = calculateExperienceClarity(resumeText);
     const weakVerbsList = countWeakVerbs(resumeText);
 
     // 3. Impact & Metrics
-    let impactScore = 100;
     const noQuantification = !detectQuantification(resumeText);
-    if (noQuantification) impactScore = 20;
+    const quantMatches = (resumeText.match(/(\d+[xX×]|\d+%|\+\d+%|\$[\d,.]+[KkMmBb]?|\b(?:doubled|tripled|quadrupled)\b|\d+\s*(?:users|clients|customers|revenue|dollars|projects|systems|teams|engineers|features|releases|services|applications|updates|requests|transactions|events|records|downloads|stars|workshops|members|students))/gi) || []).length;
+    let impactScore: number;
+    if (quantMatches === 0) impactScore = 20;
+    else if (quantMatches <= 2) impactScore = 55;
+    else if (quantMatches <= 5) impactScore = 80;
+    else impactScore = 100;
 
     // 4. Skills Coverage
-    let skillsScore = 100;
-    if (!detectSkillsSection(resumeText)) skillsScore = 20;
+    let skillsScore: number;
+    if (!detectSkillsSection(resumeText)) {
+        skillsScore = 20;
+    } else {
+        const skillsText = extractSkillsText(resumeText);
+        const skillCount = countSkillEntries(skillsText);
+        if (skillCount < 5) skillsScore = 60;
+        else if (skillCount < 10) skillsScore = 80;
+        else skillsScore = 100;
+    }
 
     // 5. Education Presence
     let eduScore = 100;
@@ -492,7 +566,6 @@ export function analyzeResumeMatch(resumeText: string, jobDescription: string): 
         };
     }
 
-    const cfgFormat = ATS_SCORING_CONFIG.formatting;
     const weights = ATS_SCORING_CONFIG.matchWeights;
 
     // 1. Technical Keyword Extraction & Required vs Preferred Weighting
@@ -527,26 +600,8 @@ export function analyzeResumeMatch(resumeText: string, jobDescription: string): 
     keywordScore = Math.min(100, Math.max(0, keywordScore));
 
     // 2. Formatting & Parseability
-    let formatScore = cfgFormat.baseScore;
-    const lowWordCount = resumeText.length < cfgFormat.lowWordCountThreshold;
-
-    if (lowWordCount) formatScore -= cfgFormat.lowWordCountDeduction;
-    if (resumeText.length > cfgFormat.highWordCountThreshold) formatScore -= cfgFormat.highWordCountDeduction;
-
-    const specialCharCount = (resumeText.match(/[^\w\s.,-]/g) || []).length;
-    if (specialCharCount > resumeText.length * cfgFormat.specialCharThresholdPercent) formatScore -= cfgFormat.specialCharDeduction;
-
-    const upperCaseWords = (resumeText.match(/\b[A-Z]{4,}\b/g) || []).length;
-    const totalWords = resumeText.split(/\s+/).length;
-    if (totalWords > 0 && upperCaseWords / totalWords > cfgFormat.uppercaseRatioThreshold) formatScore -= cfgFormat.uppercaseDeduction;
-
-    const noBulletPoints = !(/•|-|\*/.test(resumeText));
-    if (noBulletPoints) formatScore -= cfgFormat.noBulletsDeduction;
-
+    const { score: formatScore, lowWordCount } = calculateFormattingScore(resumeText, true);
     const noQuantification = !detectQuantification(resumeText);
-    if (noQuantification) formatScore -= cfgFormat.noQuantificationDeduction;
-
-    formatScore = Math.min(100, Math.max(0, formatScore));
 
     // 3. Calibrated Experience Relevance
     const { score: experienceScore, gap: experienceGap } = calculateATSExperienceScore(resumeText, jobDescription);
