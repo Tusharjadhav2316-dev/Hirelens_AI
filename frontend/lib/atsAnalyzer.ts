@@ -17,6 +17,18 @@ export interface ATSAnalysisResult {
     completenessScore: number;
 }
 
+function escapeRegexChars(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function skillAppearsInText(skillName: string, fullText: string): boolean {
+    if (skillName.length <= 3) {
+        const pattern = new RegExp('\\b' + escapeRegexChars(skillName) + '\\b', 'i');
+        return pattern.test(fullText);
+    }
+    return fullText.includes(skillName);
+}
+
 export function analyzeResume(resume: Resume, isOverflowing: boolean = false): ATSAnalysisResult {
     let warnings: string[] = [];
     let suggestions: string[] = [];
@@ -198,7 +210,7 @@ export function analyzeResume(resume: Resume, isOverflowing: boolean = false): A
         let matchedSkillCount = 0;
         resume.skills.forEach(skill => {
             const skillName = skill.name.toLowerCase().trim();
-            if (skillName && fullText.includes(skillName)) {
+            if (skillName && skillAppearsInText(skillName, fullText)) {
                 matchedSkillCount++;
             }
         });
