@@ -100,3 +100,42 @@
 **Values:** improve: max_tokens 400, temp 0.3; insights: max_tokens 500, temp 0.4; jd-refine: max_tokens 700, temp 0.4.
 **Alternatives Considered:** Hardcode in each route (rejected — centralization via promptTemplates.ts maintains the pattern established in Sprint 3).
 **Status:** Accepted
+
+---
+
+## Sprint 5 Decisions
+
+### [Sprint 5, Day 1] Introduce optimization modes as an orthogonal axis from section type
+**Decision:** Add an optional `mode` parameter (`"ats" | "impact" | "concise" | "action-verbs" | "jd-align"`) to `/api/ai-improve`, `aiService.ts`, and `promptTemplates.ts`. Mode is orthogonal to section — any mode can be applied to any section.
+**Reason:** The current single-strategy "improve this text" approach gives users no control over what kind of improvement they want. Five distinct, non-overlapping modes cover the most common optimization goals without creating a menu of paraphrasers.
+**Alternatives Considered:** Per-section mode defaults only (rejected — removes user agency); A single "optimize" button with no mode concept (rejected — produces inconsistent output quality).
+**Status:** Accepted
+
+### [Sprint 5, Day 1] Centralize all section prompts in `promptTemplates.ts` via `buildOptimizerPrompt()`
+**Decision:** Move the 5-branch `if/else if` section prompt chain from `route.ts` into `SECTION_BASE_PROMPTS` and `OPTIMIZER_MODE_PROMPTS` in `promptTemplates.ts`. The route calls `buildOptimizerPrompt()` — a pure, testable function.
+**Reason:** Prompt strings scattered across route handlers are untestable and prone to silent drift. Centralizing them enables the optimizer safety test suite (Sprint 5 Day 5) to verify guardrail presence without making API calls.
+**Alternatives Considered:** Keep prompts in route, add comments (rejected — no testability); Separate prompt management service (rejected — over-engineering for current scale).
+**Status:** Accepted
+
+### [Sprint 5, Day 1] `HALLUCINATION_GUARDRAIL` appended inside `buildOptimizerPrompt`, not at the route level
+**Decision:** The guardrail is appended unconditionally inside `buildOptimizerPrompt()`, not in the route's system prompt or at the call site.
+**Reason:** Ensures every composed prompt contains the guardrail regardless of which caller invokes `buildOptimizerPrompt`. A future caller that bypasses the route still gets guardrail protection. Automated tests verify this for all 30 section/mode combinations.
+**Status:** Accepted
+
+### [Sprint 5, Day 2] Certification accept action appends professional context to `name` field
+**Decision:** Since `types/resume.ts`'s `Certification` type has no `description` or `notes` field, the accept action for certification AI suggestions appends the suggestion to `item.name` as `"${item.name} — ${improvedText}"`.
+**Reason:** Adding a new field to `Certification` would cascade into `atsAnalyzer.ts`, `exportService.ts`, history snapshots, and Firestore data — too broad for Day 2's scope. The name-append approach is pragmatic and reversible.
+**Alternatives Considered:** Add `description?: string` to `Certification` type (deferred — appropriate for a future sprint when a planned `notes` field is introduced); Copy to clipboard instead of updating a field (rejected — no confirmation the user received the suggestion).
+**Status:** Accepted (with note: revisit in a future sprint when Certification type is extended)
+
+### [Sprint 5, Day 3] JD stored in `ResumeEditor` local state, not in `ResumeContext`
+**Decision:** The job description for optimization targeting is stored as `useState` in `ResumeEditor.tsx`, not persisted in `ResumeContext` or Firestore.
+**Reason:** The JD is session context for the optimization workflow, not part of the candidate's resume data. Persisting it would pollute the resume model and require Firestore schema changes. Session-only is appropriate — users re-enter the JD when needed.
+**Alternatives Considered:** Store JD in `ResumeContext` (rejected — pollutes resume data model); Persist JD per-resume in Firestore (deferred — valid for a future "saved JD targets" feature in Sprint 7+).
+**Status:** Accepted
+
+### [Sprint 5, Day 4] `onAccept(finalText: string)` — modal returns edited text to calling form
+**Decision:** Change `onAccept()` to `onAccept(finalText: string)` so the modal returns its internal (potentially user-edited) text to the calling form, rather than the calling form reading from its own `improvedText` state.
+**Reason:** The modal now has an editable textarea (`localImprovedText`). The calling form must receive the final edited value, not the original AI suggestion.
+**Alternatives Considered:** Expose `localImprovedText` via a ref (rejected — refs for state management are an anti-pattern in React functional components); Keep `onAccept()` parameterless and lift `localImprovedText` to parent (rejected — breaks the modal's encapsulation).
+**Status:** Accepted

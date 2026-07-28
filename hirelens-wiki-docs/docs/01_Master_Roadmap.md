@@ -1,142 +1,86 @@
 # HireLens 2.0 — Master Roadmap
 
-> **Structure preserved from the original draft per design review.** The sprint sequence, dependency graph, and status tracking stay as-is. One correction: several sprint titles below name a specific technology (e.g., "Streaming Chat (SSE)," "Career Memory (Context + Vector Store)") that was assumed from the original redesign report, not yet confirmed against this repository. Sprint 1, Day 5 explicitly checks each of these and adds a "Roadmap Corrections Needed" note below if a title's premise turns out to be wrong — for example, if the actual backend doesn't support SSE the way assumed, or the database confirmed in Sprint 1 doesn't support vector search the way "pgvector" implies. Until Sprint 1, Day 5, treat every technology named in a sprint title as a **placeholder for the underlying goal**, not a locked-in implementation choice.
+> **Authoritative 14-Sprint Roadmap.** Sprint names and sequence below are locked. Do not add, remove, or reorder sprints. Update **Status** and **Actual Outcome** as sprints complete. Daily implementation detail lives in `Sprint_NN/Day_NN.md` — not in this file.
 
-## Roadmap Corrections Needed
+## Sprint Overview
 
-**Confirmed Sprint 1, Day 5:** The original 14-sprint plan (Sprints 3–14: backend/frontend refactor, AI Career Coach, streaming chat, CrewAI, etc.) was written against the redesign report's *assumed* target architecture (FastAPI + PostgreSQL + CrewAI), not the verified stack (Next.js/React/Firebase, no backend DB, no agent framework). **Sprints 3–14 as originally titled are not yet valid and will need re-scoping once Sprint 2 (stabilization) is complete** — e.g., "Backend Refactoring" needs to target Next.js API routes, not FastAPI services; "CrewAI Integration" needs a Decision Log entry confirming whether CrewAI (a Python framework) is even the right choice for a Next.js/TypeScript backend, or whether a TypeScript-native orchestration approach fits better. This wiki intentionally does not silently rewrite those later sprints now — they get re-scoped when the project actually reaches them, grounded in Sprint 2's outcome, not before.
-
-> This file is the index. It never contains daily implementation detail — that lives in `Sprint_NN/Day_NN.md`. Update the **Status** column as sprints complete. This file should always reflect ground truth.
-
-## Roadmap Overview
-
-| Sprint | Title | Est. Days | Difficulty | Depends On | Status |
-|---|---|---|---|---|---|
-| 1 | Project Discovery | 5 | Easy | — | ✅ Complete |
-| 2 | Production Stabilization | 5 | Medium | Sprint 1 | ✅ Complete |
-| 3 | AI Resume Intelligence | 5 | Medium | Sprint 2 | ✅ Complete |
-| 3 | Backend Refactoring | 8 | Medium-Hard | Sprint 2 | ⬜ Not Started |
-| 4 | Frontend Refactoring | 8 | Medium | Sprint 2 | ⬜ Not Started |
-| 5 | AI Career Coach UI | 6 | Medium | Sprint 4 | ⬜ Not Started |
-| 6 | Streaming Chat (SSE) | 6 | Medium-Hard | Sprint 3, 5 | ⬜ Not Started |
-| 7 | Resume Canvas (Schema-Driven Builder) | 8 | Hard | Sprint 4 | ⬜ Not Started |
-| 8 | ATS Engine (Multi-Dimensional Scoring) | 6 | Hard | Sprint 3 | ⬜ Not Started |
-| 9 | CrewAI Integration | 10 | Hard | Sprint 3, 6, 8 | ⬜ Not Started |
-| 10 | Career Memory (Context + Vector Store) | 6 | Medium-Hard | Sprint 9 | ⬜ Not Started |
-| 11 | Interview Coach Agent | 6 | Medium | Sprint 9 | ⬜ Not Started |
-| 12 | Application Tracker | 5 | Medium | Sprint 4 | ⬜ Not Started |
-| 13 | Deployment & Observability | 5 | Medium-Hard | All above | ⬜ Not Started |
-| 14 | Testing & Portfolio Polish | 6 | Medium | All above | ⬜ Not Started |
-
-**Total estimate: ~90 working days** (roughly 18 weeks at 5 days/week — pace yourself; this is a marathon, not a sprint in the literal sense, despite the naming convention).
+| # | Title | Est. Days | Difficulty | Status |
+|---|---|---|---|---|
+| 1 | Repository Discovery & Engineering Audit | 5 | Easy | ✅ Complete |
+| 2 | Production Stabilization | 5 | Medium | ✅ Complete |
+| 3 | AI Resume Intelligence | 5 | Medium | ✅ Complete |
+| 4 | Advanced ATS Intelligence & Resume Quality Refinement | 5 | Medium | ✅ Complete |
+| 5 | AI Resume Optimizer & Rewrite Engine | 5 | Medium | ⬜ Not Started |
+| 6 | AI Career Coach | 8 | Hard | ⬜ Not Started |
+| 7 | Job Search & Application Tracker | 7 | Medium-Hard | ⬜ Not Started |
+| 8 | CrewAI Multi-Agent System | 10 | Hard | ⬜ Not Started |
+| 9 | AI Interview Coach | 7 | Medium-Hard | ⬜ Not Started |
+| 10 | Career Roadmap & Learning Engine | 6 | Medium | ⬜ Not Started |
+| 11 | Premium UI/UX Redesign | 8 | Medium-Hard | ⬜ Not Started |
+| 12 | Premium SaaS Features & Payments | 7 | Hard | ⬜ Not Started |
+| 13 | Testing, Performance, Security & Optimization | 6 | Medium-Hard | ⬜ Not Started |
+| 14 | Production Launch & Deployment | 6 | Hard | ⬜ Not Started |
 
 ---
 
-## Sprint Detail
+## Completed Sprints
 
-### Sprint 1 — Project Discovery ✅ Complete
-**Goal:** Build a complete, *verified, citation-backed* mental model of the current codebase before changing anything.
-**Actual Outcome:** Confirmed stack is Next.js 16 (App Router) + React 19 + TypeScript, Firebase Auth/Firestore (client-SDK only, no server-side DB), OpenRouter (Gemini 2.0 Flash Lite) for all AI completions. Identified 2 critical blockers (build failure, Firestore casing bug), 3 high-severity confirmed issues (unauthenticated API routes, no middleware, broken Job Matcher display), and several medium/low items — full list in `02_Architecture.md` and `26_Risks.md`. The original 14-sprint roadmap's tech assumptions were invalidated — see "Roadmap Corrections Needed" above.
-**Deliverables:** `PROJECT_DISCOVERY.md`, `ENVIRONMENT_VERIFICATION.md`, `BACKEND_AUDIT.md`, `FRONTEND_AUDIT.md` (archived in `Sprint_01/_raw_findings/`), consolidated into `docs/02_Architecture.md`, `docs/21_Tech_Stack.md`, `docs/26_Risks.md`, `docs/20_Decision_Log.md`.
+### Sprint 1 — Repository Discovery & Engineering Audit ✅ Complete
+**Actual Outcome:** Confirmed stack: Next.js 16 App Router, React 19, TypeScript, Firebase Auth + Firestore (client SDK only, no server-side DB), OpenRouter (Gemini 2.0 Flash Lite). Identified 2 critical blockers (build failure, Firestore casing bug), 3 high-severity issues (unauthenticated API routes, no middleware, broken Job Matcher display). The original design-report-assumed stack (FastAPI, PostgreSQL, CrewAI) was confirmed absent.
 
 ### Sprint 2 — Production Stabilization ✅ Complete
-**Goal:** Resolve the Critical and High-severity issues confirmed in Sprint 1 — production build failure, Firestore casing bug, unauthenticated API routes, broken Job Matcher insights display, hardcoded secrets. No new features, no UI redesign, no agent orchestration.
-**Dependencies:** Sprint 1.
-**Actual Outcome:** Successfully completed all 5 daily stabilization tasks to secure, fix, and prepare the project for deployment:
-- Day 1: Cast `pdfBytes.buffer as ArrayBuffer` in the `Blob` constructor, resolving the production build type error in `cover-letter/page.tsx`.
-- Day 2: Standardized the Firestore collection name to lowercase `"users"` to align with reads and resolve the new profile loading defect.
-- Day 3: Integrated Firebase Admin SDK token authentication headers validation in all serverless API routes (`/api/*`).
-- Day 4: Rendered Job Matcher AI insights with full loading state in the UI, and corrected the settings link in the navigation menu.
-- Day 5: Extracted the client-exposed Firebase configuration fields from `lib/firebase.ts` into environment variables, updated `.env.example`, and successfully compiled Next.js via Turbopack.
-**Deliverables:** See `Sprint_02/Day_01.md` through `Day_05.md`.
+**Actual Outcome:** Fixed production build failure (`cover-letter/page.tsx` Uint8Array/BlobPart), Firestore collection casing (`"Users"` → `"users"`), added Firebase Admin SDK token verification to all 5 `/api/*` routes, rendered Job Matcher AI insights, fixed settings navbar link, moved Firebase config to environment variables.
 
-### Sprint 3 — Backend Refactoring
-**Goal:** Move CPU-bound PDF parsing off the event loop, restructure services per the audit's target `backend/app/` layout, introduce Pydantic-validated request/response schemas everywhere.
-**Deliverables:** `AsyncDocumentParser` with thread-pool executor, `schemas/` fully typed, prompt-injection mitigation on all LLM-facing string construction.
+### Sprint 3 — AI Resume Intelligence ✅ Complete
+**Actual Outcome:** `lib/atsAnalyzer.ts` — certifications/achievements scoring, real keyword density computation, expanded weak verbs, skill-level guidance. `lib/atsEngine.ts` — removed artificial 35-point floor, bigram keyword extraction, improved quantification regex, date-range year inference. `lib/jdMatcher.ts` — frequency-weighted keyword selection, required vs. preferred skill detection, structured section scoring. `api/ai-improve` — achievements/certifications support, optional JD context. `lib/promptTemplates.ts` created. `api/ai-insights` — system prompt added.
 
-### Sprint 4 — Scoring Engine Hardening, Intelligence Signal Visibility & Serverless AI Optimization
-**Status:** ✅ Complete
-**Goal:** Transform HireLens into a recruiter-level ATS platform by fixing confirmed scoring gaps, surfacing hidden intelligence signals, unifying scoring engines, expanding benchmark suites, and hardening AI route token/parameter controls.
-**Actual Outcome:**
-- Day 1: Wired `resume` param to `analyzeJobMatch()` in `JDMatcherPanel.tsx`, activating structured section scoring (skills %, experience %, projects %). Unified stop word sets with `MASTER_STOP_WORDS`.
-- Day 2: Surfaced `keywordDensityScore`, `impactScore`, and `completenessScore` in `ATSScorePanel.tsx` in a new "Resume Intelligence" section with color-coded progress bars.
-- Day 3: Extracted `calculateFormattingScore()` helper in `atsEngine.ts`. Graduated `impactScore` (20/55/80/100) and `skillsScore` (20/60/80/100) into granular 4-tier metrics.
-- Day 4: Added word-boundary regex (`/\b<skill>\b/i`) matching for short skills ($\le 3$ chars) in `atsAnalyzer.ts` (preventing "Go" matching "going"). Expanded `atsBenchmark.test.ts` to execute and verify `BENCHMARK_JDS.javaFullStack`.
-- Day 5: Added model parameters (`max_tokens` & `temperature`) across all serverless AI routes (`ai-improve`, `ai-insights`, `jd-refine`). Cleaned redundant persona preamble from `ai-insights` user message prompt. All 6 benchmark sections passed cleanly. Production build (`npm run build`) succeeded with 0 errors.
+### Sprint 4 — Advanced ATS Intelligence & Resume Quality Refinement ✅ Complete
+**Actual Outcome:** Fixed Sprint 3's structured section scoring (JDMatcherPanel never passed `resume` param — 1-line fix that activated a full sprint of work). Added "Resume Intelligence" section to `ATSScorePanel.tsx` surfacing `keywordDensityScore`, `impactScore`, `completenessScore`. Graduated binary impact/skills scores (4-tier). Extracted `calculateFormattingScore()` helper. Fixed keyword density false positives for short skill names (word-boundary regex). Expanded benchmark suite with Java Full Stack JD. Added `max_tokens` and `temperature` to all AI routes. Cleaned duplicate persona from `ai-insights` user prompt.
 
-### Sprint 5 — AI Career Coach UI
-**Goal:** Build the conversational shell (chat pane, suggestions, upload affordances) — UI only, no live agent yet.
-**Deliverables:** `AiCoachPane.jsx`, `useCoachStore.js` skeleton, side-panel navigation to existing tool pages.
+### Sprint 5 — AI Resume Optimizer & Rewrite Engine ✅ Complete
+**Actual Outcome:** Built central prompt architecture in `promptTemplates.ts` supporting 5 optimization modes (`ats`, `impact`, `concise`, `action-verbs`, `jd-align`) with strict `HALLUCINATION_GUARDRAIL`. Extended `api/ai-improve` route and `aiService.ts` with `mode` parameter and length limit enforcement. Added AI optimize buttons across all 5 resume forms (Achievements, Certifications, Personal Summary, Experience, Projects). Added Job Description context panel in `ResumeEditor.tsx` feeding target JD to all optimizer calls. Upgraded `AIImprovementModal` with editable output `<textarea>`, `↺ Regenerate` action, mode badges, JD Context badges, and persistent `activeItemId` state lifecycle. Created `tests/optimizerSafety.test.ts` (49 automated assertions + 4 manual truth-preservation cases passed 100%).
 
-### Sprint 6 — Streaming Chat (SSE)
-**Goal:** Wire the Coach UI to a real streaming backend endpoint.
-**Deliverables:** `/api/v1/coach/query-stream`, SSE client in Zustand, non-agentic echo/LLM passthrough first (CrewAI comes later).
+---
 
-### Sprint 7 — Resume Canvas
-**Goal:** Schema-driven, split-pane resume builder against the JSON Resume schema, with live PDF preview.
-**Deliverables:** Zustand schema store, section editor components, `@react-pdf/renderer` preview pane, PDF/DOCX export.
+## Active Sprint
 
-### Sprint 8 — ATS Engine
-**Goal:** Implement the weighted multi-dimensional scoring model (semantic, coverage, structure, readability) from the audit.
-**Deliverables:** `ats_service.py`, embedding-based semantic score, NER-based keyword coverage, structural checkpoint scanner, BPQ readability scorer.
+### Sprint 6 — AI Career Coach ⬜ 0% Progress
+**Goal:** Build an AI conversational assistant as a secondary interface within HireLens.
 
-### Sprint 9 — CrewAI Integration
-**Goal:** Stand up the agent framework and wire the first real multi-agent workflow (ATS Review + Company Research → Cover Letter).
-**Deliverables:** `crew_manager.py`, Manager/ATS/Research/Cover-Letter agents, internal tool endpoints. See `10_CrewAI_Guide.md` — this sprint does not start until that guide is read.
+---
 
-### Sprint 10 — Career Memory
-**Goal:** Give the Coach persistent context across sessions (vector store + structured profile memory).
-**Deliverables:** pgvector setup, embedding pipeline, memory retrieval tool exposed to CrewAI agents.
+## Planned Sprints (High-Level)
 
-### Sprint 11 — Interview Coach Agent
-**Goal:** Simulated interview mode with tailored question generation and feedback.
-**Deliverables:** Interview Coach Agent, `interview_service.py`, `InterviewSession` flows.
+An AI conversational assistant as a secondary interface within HireLens. The Career Coach can answer career questions, help interpret ATS scores, suggest resume improvements, and guide the user through job application strategy. Grounded in the existing resume data and ATS results. Architecture decision (language/framework/streaming mechanism) must be made in Sprint 6 Day 1 based on the confirmed Next.js stack — not assumed from the original CrewAI-first design. CrewAI is **not** in this sprint (see Sprint 8).
 
-### Sprint 12 — Application Tracker
-**Goal:** Kanban-style application pipeline, state-synced with chat-driven updates.
-**Deliverables:** `JobApplication` CRUD UI, Application Tracker Agent hook-in.
+### Sprint 7 — Job Search & Application Tracker
+Job search integration and an application pipeline tracker. The tracker lets users log applications, track status (Wishlist → Applied → Interviewing → Offered/Rejected), and add notes. Integration with external job search APIs (e.g., JSearch, Adzuna, or similar) to be decided based on available free-tier options at implementation time. Architecture: Firestore collections for application data; client-side kanban or list UI.
 
-### Sprint 13 — Deployment & Observability
-**Goal:** Production deployment with caching, secrets management, tracing.
-**Deliverables:** Multi-stage Docker builds, CI/CD pipeline, Redis cache, OpenTelemetry + Prometheus.
+### Sprint 8 — CrewAI Multi-Agent System
+Introduce multi-agent orchestration using CrewAI (Python framework). **Note:** The confirmed backend is Next.js/TypeScript. Sprint 8 must address this architectural mismatch before day 1 of implementation — options include: a Python sidecar service alongside Next.js, a migration to a Python-capable deployment target, or substituting a TypeScript-native agent framework. This decision must be logged in `20_Decision_Log.md` before any implementation begins. CrewAI agents from the original design: ATS Review, Company Research, Cover Letter, Interview Coach, Skill Gap, Study Roadmap, Application Tracker, Planner.
 
-### Sprint 14 — Testing & Portfolio Polish
-**Goal:** Test coverage, accessibility pass (WCAG AA), README/demo polish for showcasing the project.
-**Deliverables:** Pytest + frontend test suite, accessibility audit fixes, demo script.
+### Sprint 9 — AI Interview Coach
+Simulated interview mode with tailored question generation, candidate response recording (or text input), and structured feedback. Question sets generated from the candidate's resume + target job description. Feedback on clarity, structure, and specificity. Architecture: session-based (not persisted by default); powered by the existing OpenRouter integration.
+
+### Sprint 10 — Career Roadmap & Learning Engine
+Skill gap analysis extended into a personalized learning path generator. Identifies missing skills against a target role, maps them to recommended resources (courses, projects, certifications), and generates a chronological study plan. Architecture: extends existing `jdMatcher.ts` skill-gap detection; learning resource suggestions via AI prompting (no external learning API dependency by default — can be added if a suitable free tier is identified).
+
+### Sprint 11 — Premium UI/UX Redesign
+Full design system refresh: design tokens, component library, accessibility pass (WCAG AA), responsive layout improvements, animation polish. This is the sprint where the "AI Career Operating System" visual identity is locked in. Constraint: no feature work in this sprint — UI only.
+
+### Sprint 12 — Premium SaaS Features & Payments
+Subscription tiers (Free/Pro/Team), Stripe integration, usage metering, rate limiting by tier, feature gating. Architecture: requires a server-side billing layer; likely introduces a Firebase Cloud Function or Next.js API route for webhook handling.
+
+### Sprint 13 — Testing, Performance, Security & Optimization
+Full test suite (Vitest + Playwright E2E), Lighthouse performance audit, Firestore security rules audit, bundle analysis and code splitting, dependency audit, security review of all auth boundaries.
+
+### Sprint 14 — Production Launch & Deployment
+Vercel production deployment, custom domain, CI/CD pipeline (GitHub Actions), environment separation (dev/staging/prod), monitoring and alerting (OpenTelemetry/Sentry), performance baseline, launch checklist.
 
 ---
 
 ## How to Use This File
-
-- Don't expand sprint detail here — open `Sprint_NN/Day_01.md` when a sprint starts.
-- When a sprint completes, change its Status emoji and add a one-line "Actual outcome" note beneath its row.
-- If scope changes mid-project, edit this file first, then regenerate only the affected `Sprint_NN/` days — never silently drift from this document.
-
-### Sprint 3 — AI Resume Intelligence ✅ Complete
-**Goal:** Transform HireLens from a "Resume Checker" into a "Resume Intelligence Platform" by improving the accuracy and quality of every AI and scoring layer — no new features, no UI changes, no infrastructure additions.
-**Actual Outcome:** Completed all 5 daily intelligence enhancements across scoring engines, AI API routes, and prompt architecture:
-- Day 1: Added certifications and achievements scoring in `lib/atsAnalyzer.ts`, calculated real `keywordDensityScore`, aligned weak verbs, and added skill level guidance.
-- Day 2: Removed the artificial 35-point floor in `lib/atsEngine.ts`, added bigram keyword extraction, expanded quantification regex, and inferred experience years from 4-digit date ranges.
-- Day 3: Implemented frequency-weighted keyword selection in `lib/jdMatcher.ts`, required vs. preferred skill weighting (1.0 vs 0.5), and structured section scoring via optional `resume?: Resume` parameter.
-- Day 4: Expanded `validSections` in `/api/ai-improve/route.ts` to include achievements and certifications, added optional `jobDescription` context support, and updated `lib/aiService.ts`.
-- Day 5: Created `lib/promptTemplates.ts` as canonical prompt store, added system prompt to `/api/ai-insights`, aligned prompt guardrails across routes, and completed full regression verification.
-**Deliverables:** See `Sprint_03/Day_01.md` through `Day_05.md`.
-
-
-### Sprint 4 — Advanced ATS Intelligence & Resume Quality Refinement
-**Goal:** Fix confirmed scoring gaps, surface hidden intelligence signals, unify keyword engines, and harden the AI layer — zero new features, no UI redesign.
-**Sequence:** Day 1 JDMatcherPanel wire-up + stop word unification → Day 2 ATSScorePanel intelligence signals display → Day 3 graduate binary scores + extract format helper → Day 4 keyword density false-positive fix + Java benchmark expansion → Day 5 AI route model params + Sprint 4 regression.
-**Files changed:**
-- `components/resume-builder/JDMatcherPanel.tsx` — pass `resume` to `analyzeJobMatch()`
-- `lib/jdMatcher.ts` — replace local STOP_WORDS with MASTER_STOP_WORDS
-- `components/resume-builder/ATSScorePanel.tsx` — display keywordDensityScore, impactScore, completenessScore
-- `lib/atsEngine.ts` — graduated impact/skills scores, extract calculateFormattingScore()
-- `lib/atsAnalyzer.ts` — word-boundary matching for short skill names
-- `tests/atsBenchmark.test.ts` — Java Full Stack JD benchmark added
-- `docs/BENCHMARK_REGRESSION.md` — updated with Java Full Stack scores
-- `lib/promptTemplates.ts` — model parameter constants added
-- `app/api/ai-insights/route.ts` — user prompt cleaned, model params added
-- `app/api/ai-improve/route.ts` — model params added
-- `app/api/jd-refine/route.ts` — model params added
-**Dependencies:** Sprint 3 complete.
-**Expected Outcome:** Scores are accurate and recruiter-aligned; intelligence signals are visible; AI responses are consistently-lengthed and cost-controlled.
+- Update **Status** column when a sprint changes state
+- Add a real "Actual Outcome" paragraph when a sprint completes — do not invent details, only write what was actually verified
+- Never expand future sprint descriptions here — detail lives in `Sprint_NN/Day_NN.md`
+- If a sprint's technical premises change (e.g., a framework decision), log the change in `20_Decision_Log.md` first, then update this file

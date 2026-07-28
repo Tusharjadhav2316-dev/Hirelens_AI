@@ -70,12 +70,6 @@ flowchart TD
 | 11 | `/api/ai-improve` returned 400 for achievements/certifications and lacked JD context | High | 2026-07-24 | Sprint 3, Day 4 | Expanded `validSections` in `/api/ai-improve/route.ts` to include achievements and certifications, added section prompts, and added optional `jobDescription` context support. Updated `lib/aiService.ts`. |
 | 12 | Prompt strings were inline, duplicated across routes, and `ai-insights` lacked system prompt | Medium | 2026-07-24 | Sprint 3, Day 5 | Created `lib/promptTemplates.ts` as centralized prompt store, added `AI_INSIGHTS_SYSTEM_PROMPT` to `/api/ai-insights`, and aligned prompt guardrails in `ai-improve`, `jd-refine`, and `cover-letter`. |
 | 13 | ATS Match & Resume Quality engines lacked centralized config, had duplicate logic, and produced inaccurate scores for non-employment resumes | High | 2026-07-25 | Sprint 3, Regression | Created `lib/atsConfig.ts` with `ATS_SCORING_CONFIG`, unified scoring via `atsEngine.ts`, implemented technical phrase extraction (Bigrams/Trigrams), filtered HR boilerplate, and calibrated ATS experience scoring. |
-| 14 | `analyzeJobMatch()` parameter `resume` was not passed from `JDMatcherPanel.tsx` | Critical (bug) | 2026-07-26 | Sprint 4, Day 1 | Wired `resume` as 3rd parameter to `analyzeJobMatch()` in `JDMatcherPanel.tsx:135`, activating structured section scoring. |
-| 15 | `jdMatcher.ts` used separate local `STOP_WORDS` set (~80 words) instead of `MASTER_STOP_WORDS` | High | 2026-07-26 | Sprint 4, Day 1 | Replaced local `STOP_WORDS` in `jdMatcher.ts` with centralized `MASTER_STOP_WORDS` from `lib/atsConfig.ts`, unifying keyword extraction across engines. |
-| 16 | `ATSScorePanel.tsx` ignored computed intelligence signals (`keywordDensityScore`, `impactScore`, `completenessScore`) | High | 2026-07-26 | Sprint 4, Day 2 | Added "Resume Intelligence" section to `ATSScorePanel.tsx`, surfacing all three signals with descriptive subtitles and color-coded progress bars. |
-| 17 | `impactScore` and `skillsScore` in Quality mode were binary 100/20; formatting score code was duplicated | High | 2026-07-26 | Sprint 4, Day 3 | Extracted exported `calculateFormattingScore()` helper in `atsEngine.ts`, and graduated `impactScore` (20/55/80/100) and `skillsScore` (20/60/80/100) into 4-tier granular metrics. |
-| 18 | `atsAnalyzer.ts` used `.includes()` for short skill names, causing false-positives ("Go" matching "going") | Medium | 2026-07-26 | Sprint 4, Day 4 | Added `skillAppearsInText()` helper in `atsAnalyzer.ts` using word-boundary regex (`/\b<skill>\b/i`) for skills $\le 3$ chars. |
-| 19 | `atsBenchmark.test.ts` contained `BENCHMARK_JDS.javaFullStack` fixture but never executed tests against it | Medium | 2026-07-26 | Sprint 4, Day 4 | Added Section 4 Java Full Stack JD verification to `atsBenchmark.test.ts` validating score progression across Internship, 1-2 Yrs Pro, and 3-5 Yrs Senior profiles. |
 
 
 
@@ -91,3 +85,54 @@ flowchart TD
 
 - Firestore Security Rules have not been audited. The client writes directly to Firestore; whether Firestore rules themselves enforce any authorization is unknown and is a candidate for a dedicated audit before assuming client-side writes are "secured enough" long-term.
 - Whether `OPENROUTER_API_KEY` has a billing cap or alert configured is unknown — relevant given Issue #3's unauthenticated-billing-abuse risk.
+
+---
+
+## Sprint 5 Architecture Additions
+
+### Optimizer Prompt Architecture
+
+`lib/promptTemplates.ts` (post Sprint 5, Day 1):
+- `OptimizerMode` — union type: `"ats" | "impact" | "concise" | "action-verbs" | "jd-align"`
+- `SECTION_BASE_PROMPTS` — record of section-specific base rewriting instructions
+- `OPTIMIZER_MODE_PROMPTS` — record of mode-specific goal instructions
+- `buildOptimizerPrompt(section, content, mode?, jobDescription?)` — pure function composing the full user prompt; unconditionally appends `HALLUCINATION_GUARDRAIL`
+
+`app/api/ai-improve/route.ts` (post Sprint 5, Day 1):
+- Accepts optional `mode?: string` — validated against `validModes[]`
+- Accepts optional `jobDescription?: string` (existed since Sprint 3)
+- Delegates all prompt construction to `buildOptimizerPrompt()` — no inline prompt strings remain
+
+`lib/aiService.ts` (post Sprint 5, Day 1):
+- `improveSection(section, content, token, jobDescription?, mode?)` — full signature
+
+### Optimizer UI Components
+
+`components/resume-builder/ResumeEditor.tsx` (post Sprint 5, Day 3):
+- `jobDescription` local state (session-only, not persisted)
+- `jdPanelOpen` local state for collapse toggle
+- Collapsible JD context panel between tab row and form area
+- Passes `jobDescription` prop to: PersonalInfoForm, ExperienceForm, ProjectsForm, AchievementsForm, CertificationsForm
+
+`components/resume-builder/AIImprovementModal.tsx` (post Sprint 5, Day 4):
+- New props: `onRegenerate?`, `optimizationMode?`, `isJdActive?`
+- `onAccept(finalText: string)` — receives the (potentially edited) final text
+- `localImprovedText` internal state — editable textarea synced from `improvedText` prop
+- Footer: mode badge, JD Context badge, Regenerate button, Cancel, Accept
+
+### Forms with AI Optimize Buttons (all 5 sections)
+| Form | Section | Default Mode | Since |
+|---|---|---|---|
+| `PersonalInfoForm.tsx` | `summary` | none (base) | Sprint 3 |
+| `ExperienceForm.tsx` | `experience` | none → `"action-verbs"` | Sprint 3 / Sprint 5 |
+| `ProjectsForm.tsx` | `projects` | none (base) | Sprint 3 |
+| `AchievementsForm.tsx` | `achievements` | `"impact"` | Sprint 5, Day 2 |
+| `CertificationsForm.tsx` | `certifications` | none (base) | Sprint 5, Day 2 |
+
+### Testing Infrastructure
+| File | Purpose | Runner |
+|---|---|---|
+| `tests/atsBenchmark.test.ts` | ATS scoring accuracy and quality hierarchy | `npx tsx tests/atsBenchmark.test.ts` |
+| `tests/optimizerSafety.test.ts` | Prompt guardrail presence, mode validation, JD injection | `npx tsx tests/optimizerSafety.test.ts` |
+
+Both test files are plain TypeScript, no test framework. Both exit with code 1 on assertion failure.

@@ -114,3 +114,37 @@
 **Impact:** The user sees an incomplete sentence in the AIImprovementModal.
 **Mitigation:** If observed during Day 5 testing, raise AI_IMPROVE_MODEL_PARAMS.max_tokens to 500 — a one-line change in promptTemplates.ts.
 **Priority:** Low (one-line fix if it occurs)
+
+---
+
+## Sprint 5 Specific Risks
+
+### AI Fabrication in Optimizer Output — Primary Risk
+**Description:** The optimizer's most critical risk is the AI model ignoring `HALLUCINATION_GUARDRAIL` and inventing metrics, skills, or experiences not present in the original content. This risk applies to all AI routes but is most visible in the optimizer because users directly compare original and improved text.
+**Impact:** Candidates submit resumes with false information. Reputational damage to HireLens and legal exposure.
+**Mitigation:** Three-layer enforcement: (1) `HALLUCINATION_GUARDRAIL` in every built prompt; (2) mode-specific non-fabrication instructions (especially `"impact"` and `"jd-align"`); (3) Manual truth-preservation tests T1–T4 verified in browser each sprint. The editable modal (Day 4) gives users the final editorial control — they can remove any fabricated content before accepting.
+**Priority:** Critical — verified before Sprint 5 is marked complete
+
+### `onAccept(finalText)` Signature Change Breaking Undiscovered Call Sites
+**Description:** Changing `onAccept()` to `onAccept(finalText: string)` in `AIImprovementModal` is a breaking change. All five form files are updated in Day 4. If any other component calls `AIImprovementModal` with the old parameterless `onAccept`, TypeScript will catch it at build time.
+**Impact:** Build failure if any undiscovered call site is missed.
+**Mitigation:** TypeScript's strict function signature checking will surface any missed call site immediately on `npm run build`. Not a runtime risk.
+**Priority:** Low (compile-time catch)
+
+### Regenerate + AbortController Race Condition
+**Description:** `lib/aiService.ts` uses `AbortController` to cancel in-flight requests when a new one starts. If a user clicks Regenerate very quickly (before the previous request completes), the AbortController correctly cancels the first and starts the second. However, if the component unmounts between Regenerate clicks (e.g., user navigates away), the in-flight request may attempt to set state on an unmounted component.
+**Impact:** A React "can't perform state update on unmounted component" warning; no data loss; no user-visible error.
+**Mitigation:** The AbortController in `aiService.ts` handles the most common case. If the warning surfaces, a standard `useEffect` cleanup that calls the abort can be added to the form component — a minor addition, not architecture work.
+**Priority:** Low
+
+### JD Context Panel UX Confusion
+**Description:** Users may misunderstand the JD panel as "HireLens will add these skills to your resume" rather than "alignment targeting only."
+**Impact:** User distrust if they notice the optimizer didn't add a skill they expected.
+**Mitigation:** The JD panel label is explicitly written: "The AI will align language and emphasis — it will not add skills you do not have." This is enforced in the Day 3 Antigravity prompt constraints.
+**Priority:** Low (UX label solution implemented)
+
+### Certification Name Field Overloading
+**Description:** The accept action for certifications appends the professional context sentence to `item.name`, creating entries like "AWS Certified Developer — Validates cloud architecture expertise." This is a workaround for the missing `description`/`notes` field on `Certification` type.
+**Impact:** Long certification names may render oddly in some resume PDF layouts.
+**Mitigation:** Accepted as a pragmatic decision (logged in `20_Decision_Log.md`). Users can edit the name field after accepting. Proper fix: add `description?: string` to `Certification` type in a future sprint, along with UI and export updates.
+**Priority:** Low (known workaround, not a defect)
