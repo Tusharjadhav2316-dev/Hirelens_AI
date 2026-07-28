@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { improveSection } from "@/lib/aiService";
+import { OptimizerMode } from "@/lib/promptTemplates";
 import AIImprovementModal from "../AIImprovementModal";
+import OptimizerModeSelector from "../OptimizerModeSelector";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -16,10 +18,13 @@ interface Props {
 
 export default function PersonalInfoForm({ data, onChange, jobDescription }: Props) {
     const { user } = useAuth();
+    const [selectedMode, setSelectedMode] = useState<OptimizerMode>("ats");
     const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
     const [error, setError] = useState<string | null>(null);
+
+    const hasJd = !!jobDescription && jobDescription.trim().length >= 20;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         onChange({ ...data, [e.target.name]: e.target.value });
@@ -32,6 +37,11 @@ export default function PersonalInfoForm({ data, onChange, jobDescription }: Pro
             return;
         }
 
+        if (selectedMode === "jd-align" && !hasJd) {
+            setError("A Job Description (at least 20 characters) is required for JD Tailored mode.");
+            return;
+        }
+
         setError(null);
         setIsImproving(true);
         setModalOpen(true); // Open modal early to show loading state
@@ -39,7 +49,7 @@ export default function PersonalInfoForm({ data, onChange, jobDescription }: Pro
 
         try {
             const token = await user?.getIdToken() || "";
-            const improved = await improveSection("summary", currentSummary, token, jobDescription);
+            const improved = await improveSection("summary", currentSummary, token, jobDescription, selectedMode);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
@@ -111,6 +121,13 @@ export default function PersonalInfoForm({ data, onChange, jobDescription }: Pro
                     </Button>
                 </div>
 
+                <OptimizerModeSelector
+                    selectedMode={selectedMode}
+                    onSelectMode={setSelectedMode}
+                    hasJd={hasJd}
+                    disabled={isImproving}
+                />
+
                 {error && (
                     <div className="text-xs text-red-500 flex items-center gap-1.5 bg-red-50 dark:bg-red-500/10 p-2 rounded-md mb-2">
                         <AlertCircle className="w-3.5 h-3.5" />
@@ -138,6 +155,7 @@ export default function PersonalInfoForm({ data, onChange, jobDescription }: Pro
                 originalText={data.summary || ""}
                 improvedText={improvedText}
                 isImproving={isImproving}
+                optimizationMode={selectedMode}
                 isJdActive={!!jobDescription}
             />
         </div>

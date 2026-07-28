@@ -139,3 +139,9 @@
 **Reason:** The modal now has an editable textarea (`localImprovedText`). The calling form must receive the final edited value, not the original AI suggestion.
 **Alternatives Considered:** Expose `localImprovedText` via a ref (rejected — refs for state management are an anti-pattern in React functional components); Keep `onAccept()` parameterless and lift `localImprovedText` to parent (rejected — breaks the modal's encapsulation).
 **Status:** Accepted
+
+### [Sprint 5, Post-Completion Correction] Expose User-Selectable Optimizer Modes in Resume Builder UI
+**Decision:** Create a reusable `OptimizerModeSelector.tsx` component and integrate it into all five AI-enabled form components (`PersonalInfoForm`, `ExperienceForm`, `ProjectsForm`, `AchievementsForm`, `CertificationsForm`).
+**Reason:** Sprint 5 Day 1 implemented five optimization modes (`ats`, `impact`, `concise`, `action-verbs`, `jd-align`) in prompt architecture and backend API, but form components hardcoded or omitted mode selection, preventing users from intentionally choosing their rewrite strategy.
+**Alternatives Considered:** Adding mode selection inside `AIImprovementModal` after generation (rejected — mode controls the generation prompt itself, so strategy selection belongs before/during the generation trigger). Adding a generic "Proceed" button to the JD context panel (rejected — JD panel provides context, section provides content, mode selector provides strategy).
+**Status:** Accepted

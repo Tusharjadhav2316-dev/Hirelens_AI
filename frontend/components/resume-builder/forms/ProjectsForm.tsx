@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Sparkles, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { improveSection } from "@/lib/aiService";
+import { OptimizerMode } from "@/lib/promptTemplates";
 import AIImprovementModal from "../AIImprovementModal";
+import OptimizerModeSelector from "../OptimizerModeSelector";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -16,12 +18,15 @@ interface Props {
 
 export default function ProjectsForm({ data, onChange, jobDescription }: Props) {
     const { user } = useAuth();
+    const [selectedMode, setSelectedMode] = useState<OptimizerMode>("impact");
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
     const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
     const [errorId, setErrorId] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const hasJd = !!jobDescription && jobDescription.trim().length >= 20;
 
     const handleAdd = () => {
         onChange([
@@ -51,6 +56,12 @@ export default function ProjectsForm({ data, onChange, jobDescription }: Props) 
             return;
         }
 
+        if (selectedMode === "jd-align" && !hasJd) {
+            setErrorId(item.id);
+            setErrorMsg("A Job Description (at least 20 characters) is required for JD Tailored mode.");
+            return;
+        }
+
         setErrorId(null);
         setActiveItemId(item.id);
         setIsImproving(true);
@@ -59,7 +70,7 @@ export default function ProjectsForm({ data, onChange, jobDescription }: Props) 
 
         try {
             const token = await user?.getIdToken() || "";
-            const improved = await improveSection("projects", currentDesc, token, jobDescription);
+            const improved = await improveSection("projects", currentDesc, token, jobDescription, selectedMode);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
@@ -94,6 +105,13 @@ export default function ProjectsForm({ data, onChange, jobDescription }: Props) 
                     <Plus className="w-4 h-4" /> Add Project
                 </Button>
             </div>
+
+            <OptimizerModeSelector
+                selectedMode={selectedMode}
+                onSelectMode={setSelectedMode}
+                hasJd={hasJd}
+                disabled={isImproving}
+            />
 
             <div className="space-y-6">
                 {data.map((item, index) => (
@@ -198,6 +216,7 @@ export default function ProjectsForm({ data, onChange, jobDescription }: Props) 
                 originalText={data.find((proj) => proj.id === activeItemId)?.description || ""}
                 improvedText={improvedText}
                 isImproving={isImproving}
+                optimizationMode={selectedMode}
                 isJdActive={!!jobDescription}
             />
         </div>

@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Sparkles, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { improveSection } from "@/lib/aiService";
+import { OptimizerMode } from "@/lib/promptTemplates";
 import AIImprovementModal from "../AIImprovementModal";
+import OptimizerModeSelector from "../OptimizerModeSelector";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -16,12 +18,15 @@ interface Props {
 
 export default function CertificationsForm({ data, onChange, jobDescription }: Props) {
     const { user } = useAuth();
+    const [selectedMode, setSelectedMode] = useState<OptimizerMode>("ats");
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
     const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
     const [errorId, setErrorId] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const hasJd = !!jobDescription && jobDescription.trim().length >= 20;
 
     const handleAdd = () => {
         onChange([
@@ -50,6 +55,12 @@ export default function CertificationsForm({ data, onChange, jobDescription }: P
             return;
         }
 
+        if (selectedMode === "jd-align" && !hasJd) {
+            setErrorId(item.id);
+            setErrorMsg("A Job Description (at least 20 characters) is required for JD Tailored mode.");
+            return;
+        }
+
         setErrorId(null);
         setActiveItemId(item.id);
         setIsImproving(true);
@@ -59,7 +70,7 @@ export default function CertificationsForm({ data, onChange, jobDescription }: P
         try {
             const token = (await user?.getIdToken()) || "";
             const content = getCertificationContent(item);
-            const improved = await improveSection("certifications", content, token, jobDescription);
+            const improved = await improveSection("certifications", content, token, jobDescription, selectedMode);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
@@ -94,6 +105,13 @@ export default function CertificationsForm({ data, onChange, jobDescription }: P
                     <Plus className="w-4 h-4" /> Add Certification
                 </Button>
             </div>
+
+            <OptimizerModeSelector
+                selectedMode={selectedMode}
+                onSelectMode={setSelectedMode}
+                hasJd={hasJd}
+                disabled={isImproving}
+            />
 
             <div className="space-y-6">
                 {data.map((item, index) => (
@@ -177,6 +195,7 @@ export default function CertificationsForm({ data, onChange, jobDescription }: P
                 })()}
                 improvedText={improvedText}
                 isImproving={isImproving}
+                optimizationMode={selectedMode}
                 isJdActive={!!jobDescription}
             />
         </div>
