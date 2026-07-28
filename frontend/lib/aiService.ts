@@ -1,3 +1,5 @@
+import { OptimizerMode } from "@/lib/promptTemplates";
+
 let activeController: AbortController | null = null;
 let lastRequestTime = 0;
 const COOLDOWN_MS = 2000;
@@ -6,7 +8,8 @@ export async function improveSection(
     section: "summary" | "experience" | "projects" | "achievements" | "certifications",
     content: string,
     token: string,
-    jobDescription?: string
+    jobDescription?: string,
+    mode?: OptimizerMode
 ): Promise<string> {
     // 1. Safety mechanisms (Anti-spam / Cooldown)
     const now = Date.now();
@@ -34,7 +37,8 @@ export async function improveSection(
             body: JSON.stringify({
                 section,
                 content,
-                ...(jobDescription ? { jobDescription } : {})
+                ...(jobDescription ? { jobDescription } : {}),
+                ...(mode ? { mode } : {})
             }),
             signal
         });

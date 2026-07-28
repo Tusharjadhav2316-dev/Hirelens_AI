@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/verifyAuth";
-import { RESUME_OPTIMIZER_PERSONA, HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN, AI_IMPROVE_MODEL_PARAMS } from "@/lib/promptTemplates";
+import {
+    RESUME_OPTIMIZER_PERSONA,
+    HALLUCINATION_GUARDRAIL,
+    OUTPUT_FORMAT_PLAIN,
+    AI_IMPROVE_MODEL_PARAMS,
+    OptimizerMode,
+    buildOptimizerPrompt
+} from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -17,7 +24,7 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { section, content, jobDescription } = body;
+        const { section, content, jobDescription, mode } = body;
 
         // 1. Validate Input
         if (!content || typeof content !== "string" || content.trim() === "") {
@@ -37,23 +44,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid section specified." }, { status: 400 });
         }
 
-        // 2. Construct Prompt dynamically
-        let userPrompt = "";
-        if (section === "summary") {
-            userPrompt = `Rewrite the professional summary to be concise (max 80 words), ATS-optimized, achievement-driven, and impactful. Preserve meaning:\n\n${content}`;
-        } else if (section === "experience") {
-            userPrompt = `Rewrite the experience content to:\n- Use strong action verbs\n- Add quantifiable impact where possible\n- Be concise\n- Preserve original intent\n- Avoid fabricating data\n\n${content}`;
-        } else if (section === "projects") {
-            userPrompt = `Rewrite the project description to:\n- Emphasize results and technical clarity\n- Improve keyword richness\n- Maintain professionalism\n- Do not fabricate metrics\n\n${content}`;
-        } else if (section === "achievements") {
-            userPrompt = `Rewrite this achievement entry to:\n- Lead with a strong, specific action verb\n- Emphasize measurable impact and tangible results\n- Be concise and recruiter-focused (aim for 1-3 sentences)\n- Preserve all factual content; do not invent or fabricate metrics or outcomes\n\n${content}`;
-        } else if (section === "certifications") {
-            userPrompt = `Review this certification entry and provide a single professional sentence explaining what this certification demonstrates to a recruiter — its relevance, the skill it validates, and the level of expertise implied. Do not modify the certification name, issuer, or year. Only add professional context.\n\n${content}`;
+        const validModes: OptimizerMode[] = ["ats", "impact", "concise", "action-verbs", "jd-align"];
+        if (mode !== undefined && !validModes.includes(mode as OptimizerMode)) {
+            return NextResponse.json({ error: "Invalid optimization mode specified." }, { status: 400 });
         }
 
-        if (jobDescription && typeof jobDescription === "string" && jobDescription.trim().length > 0) {
-            userPrompt += "\n\nTarget Job Context (tailor this rewrite for the following role):\n" + jobDescription.substring(0, 1000);
+        if (mode === "jd-align" && (!jobDescription || jobDescription.trim().length < 20)) {
+            return NextResponse.json(
+                { error: "A job description is required for JD Align optimization mode." },
+                { status: 400 }
+            );
         }
+
+        // 2. Construct Prompt dynamically
+        const userPrompt = buildOptimizerPrompt(section, content, mode as OptimizerMode | undefined, jobDescription);
+
 
         // 3. Call OpenRouter AI
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
