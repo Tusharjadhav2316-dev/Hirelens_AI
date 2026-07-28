@@ -2,14 +2,27 @@ import { Achievement } from "@/types/resume";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { improveSection } from "@/lib/aiService";
+import AIImprovementModal from "../AIImprovementModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
     data: Achievement[];
     onChange: (data: Achievement[]) => void;
+    jobDescription?: string;
 }
 
-export default function AchievementsForm({ data, onChange }: Props) {
+export default function AchievementsForm({ data, onChange, jobDescription }: Props) {
+    const { user } = useAuth();
+    const [activeItemId, setActiveItemId] = useState<string | null>(null);
+    const [isImproving, setIsImproving] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [improvedText, setImprovedText] = useState("");
+    const [errorId, setErrorId] = useState<string | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     const handleAdd = () => {
         onChange([
             ...data,
@@ -23,6 +36,46 @@ export default function AchievementsForm({ data, onChange }: Props) {
 
     const handleChange = (id: string, field: keyof Achievement, value: string) => {
         onChange(data.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+    };
+
+    const handleImproveSubmit = async (item: Achievement) => {
+        const currentDesc = item.description?.trim();
+        if (!currentDesc || currentDesc.length < 10) {
+            setErrorId(item.id);
+            setErrorMsg("Please write a description before optimizing.");
+            return;
+        }
+
+        setErrorId(null);
+        setActiveItemId(item.id);
+        setIsImproving(true);
+        setModalOpen(true);
+        setImprovedText("");
+
+        try {
+            const token = (await user?.getIdToken()) || "";
+            const improved = await improveSection("achievements", currentDesc, token, jobDescription, "impact");
+            setImprovedText(improved);
+        } catch (err: any) {
+            setModalOpen(false);
+            setErrorId(item.id);
+            setErrorMsg(err.message || "Failed to optimize achievement.");
+        } finally {
+            setIsImproving(false);
+        }
+    };
+
+    const handleAcceptImprovement = (finalText: string) => {
+        if (activeItemId && finalText) {
+            handleChange(activeItemId, "description", finalText);
+        }
+        handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        setActiveItemId(null);
+        setImprovedText("");
     };
 
     return (
@@ -60,8 +113,29 @@ export default function AchievementsForm({ data, onChange }: Props) {
                             <p className="text-[11px] text-slate-500">The specific name of the award or honor.</p>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Description</Label>
+                        <div className="space-y-2 relative">
+                            <div className="flex justify-between items-center mb-1">
+                                <Label>Description</Label>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleImproveSubmit(item)}
+                                    disabled={(isImproving && activeItemId === item.id) || modalOpen}
+                                    className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-500/10 transition-colors"
+                                >
+                                    <Sparkles className={`w-4 h-4 mr-1.5 ${isImproving && activeItemId === item.id ? "animate-pulse" : ""}`} />
+                                    {isImproving && activeItemId === item.id ? "Enhancing..." : "Improve with AI"}
+                                </Button>
+                            </div>
+
+                            {errorId === item.id && errorMsg && (
+                                <div className="text-xs text-red-500 flex items-center gap-1.5 bg-red-50 dark:bg-red-500/10 p-2 rounded-md mb-2">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    {errorMsg}
+                                </div>
+                            )}
+
                             <textarea
                                 value={item.description}
                                 onChange={(e) => handleChange(item.id, "description", e.target.value)}
@@ -80,6 +154,22 @@ export default function AchievementsForm({ data, onChange }: Props) {
                     </div>
                 )}
             </div>
+
+            <AIImprovementModal
+                isOpen={modalOpen}
+                onClose={handleCloseModal}
+                onAccept={handleAcceptImprovement}
+                onRegenerate={() => {
+                    const item = data.find((i) => i.id === activeItemId);
+                    if (item) handleImproveSubmit(item);
+                }}
+                originalText={data.find((i) => i.id === activeItemId)?.description || ""}
+                improvedText={improvedText}
+                isImproving={isImproving}
+                optimizationMode="impact"
+                isJdActive={!!jobDescription}
+            />
         </div>
     );
 }
+
