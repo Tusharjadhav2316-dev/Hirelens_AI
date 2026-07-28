@@ -1,24 +1,51 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Check, X, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ArrowRight } from "lucide-react";
 
 interface AIImprovementModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAccept: () => void;
+    onAccept: (finalText: string) => void;
+    onRegenerate?: () => void;
     originalText: string;
     improvedText: string;
     isImproving: boolean;
+    optimizationMode?: string;
+    isJdActive?: boolean;
 }
+
+const MODE_LABELS: Record<string, string> = {
+    "ats": "ATS Keywords",
+    "impact": "Impact Focus",
+    "concise": "Make Concise",
+    "action-verbs": "Action Verbs",
+    "jd-align": "JD Tailored",
+};
 
 export default function AIImprovementModal({
     isOpen,
     onClose,
     onAccept,
+    onRegenerate,
     originalText,
     improvedText,
-    isImproving
+    isImproving,
+    optimizationMode,
+    isJdActive
 }: AIImprovementModalProps) {
+    const [localImprovedText, setLocalImprovedText] = useState<string>("");
+
+    useEffect(() => {
+        if (isImproving) {
+            setLocalImprovedText("");
+        } else if (improvedText) {
+            setLocalImprovedText(improvedText);
+        }
+    }, [improvedText, isImproving]);
+
+    useEffect(() => {
+        if (!isOpen) setLocalImprovedText("");
+    }, [isOpen]);
 
     // Safety against empty rendering
     if (!isOpen) return null;
@@ -59,44 +86,59 @@ export default function AIImprovementModal({
                             AI Improved
                             {isImproving && <span className="flex w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
                         </div>
-                        <div className="flex-1 p-4 rounded-lg bg-blue-50/50 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed relative">
+                        <div className="flex-1 p-2 rounded-lg bg-blue-50/50 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50 text-sm text-slate-800 dark:text-slate-200 leading-relaxed relative">
                             {isImproving ? (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px] rounded-lg">
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px] rounded-lg z-10">
                                     <div className="flex gap-1 items-center justify-center">
                                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
                                     </div>
                                 </div>
-                            ) : (
-                                improvedText
-                            )}
+                            ) : null}
+                            <textarea
+                                value={localImprovedText}
+                                onChange={(e) => setLocalImprovedText(e.target.value)}
+                                disabled={isImproving}
+                                className="w-full h-full min-h-[160px] p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                placeholder={isImproving ? "Optimizing..." : "Edit the suggestion if needed..."}
+                            />
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter className="shrink-0 flex sm:justify-between items-center gap-3">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onClose}
-                        disabled={isImproving}
-                        className="w-full sm:w-auto text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                    >
-                        <X className="w-4 h-4 mr-2" />
-                        Reject
-                    </Button>
-                    <Button
-                        type="button"
-                        onClick={onAccept}
-                        disabled={isImproving || !improvedText}
-                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <Check className="w-4 h-4 mr-2" />
-                        Accept Changes
-                    </Button>
-                </DialogFooter>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                        {optimizationMode && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 font-medium">
+                                {MODE_LABELS[optimizationMode] ?? optimizationMode}
+                            </span>
+                        )}
+                        {isJdActive && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-medium">
+                                JD Context
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        {onRegenerate && (
+                            <button onClick={onRegenerate} disabled={isImproving}
+                                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+                                {isImproving ? "..." : "↺ Regenerate"}
+                            </button>
+                        )}
+                        <button onClick={onClose}
+                            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                            Cancel
+                        </button>
+                        <button onClick={() => onAccept(localImprovedText)} disabled={isImproving || !localImprovedText}
+                            className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-medium transition-colors">
+                            Accept Changes
+                        </button>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
 }
+
