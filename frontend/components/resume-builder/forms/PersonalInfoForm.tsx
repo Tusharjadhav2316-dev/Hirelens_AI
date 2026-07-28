@@ -11,9 +11,10 @@ import { useAuth } from "@/contexts/AuthContext";
 interface Props {
     data: PersonalInfo;
     onChange: (data: PersonalInfo) => void;
+    jobDescription?: string;
 }
 
-export default function PersonalInfoForm({ data, onChange }: Props) {
+export default function PersonalInfoForm({ data, onChange, jobDescription }: Props) {
     const { user } = useAuth();
     const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -38,7 +39,7 @@ export default function PersonalInfoForm({ data, onChange }: Props) {
 
         try {
             const token = await user?.getIdToken() || "";
-            const improved = await improveSection("summary", currentSummary, token);
+            const improved = await improveSection("summary", currentSummary, token, jobDescription);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
@@ -48,9 +49,16 @@ export default function PersonalInfoForm({ data, onChange }: Props) {
         }
     };
 
-    const handleAcceptImprovement = () => {
-        onChange({ ...data, summary: improvedText });
+    const handleAcceptImprovement = (finalText: string) => {
+        if (finalText) {
+            onChange({ ...data, summary: finalText });
+        }
+        handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
         setModalOpen(false);
+        setImprovedText("");
     };
 
     return (
@@ -99,34 +107,38 @@ export default function PersonalInfoForm({ data, onChange }: Props) {
                         className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-500/10 transition-colors"
                     >
                         <Sparkles className={`w-4 h-4 mr-1.5 ${isImproving ? "animate-pulse" : ""}`} />
-                        {isImproving ? "Enhancing..." : "Enhance Summary"}
+                        {isImproving ? "Enhancing..." : "Improve with AI"}
                     </Button>
                 </div>
+
                 {error && (
                     <div className="text-xs text-red-500 flex items-center gap-1.5 bg-red-50 dark:bg-red-500/10 p-2 rounded-md mb-2">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {error}
                     </div>
                 )}
+
                 <textarea
                     id="summary"
                     name="summary"
                     value={data.summary}
                     onChange={handleChange}
                     rows={4}
-                    className="w-full flex rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 transition-colors"
-                    placeholder="Full-stack developer with 2+ years of experience building scalable web applications using React and Node.js. Improved application performance by 30% through code optimization."
+                    className="w-full flex rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 transition-colors"
+                    placeholder="Results-driven Software Engineer with 5+ years of experience..."
                 />
-                <p className="text-sm text-slate-500 dark:text-slate-400">Write 2–3 concise sentences highlighting your experience, specialization, and key achievements.</p>
+                <p className="text-[11px] text-slate-500">Briefly introduce yourself, key skills, and career focus.</p>
             </div>
 
             <AIImprovementModal
                 isOpen={modalOpen}
-                onClose={() => !isImproving && setModalOpen(false)}
+                onClose={handleCloseModal}
                 onAccept={handleAcceptImprovement}
-                originalText={data.summary}
+                onRegenerate={() => handleImproveSummary()}
+                originalText={data.summary || ""}
                 improvedText={improvedText}
                 isImproving={isImproving}
+                isJdActive={!!jobDescription}
             />
         </div>
     );

@@ -14,7 +14,7 @@ import AchievementsForm from "./forms/AchievementsForm";
 import CertificationsForm from "./forms/CertificationsForm";
 import ResumePreview from "./preview/ResumePreview";
 import TemplateSwitcher from "./preview/TemplateSwitcher";
-import { Save, Download, Eye, FileText, AlertTriangle } from "lucide-react";
+import { Save, Download, Eye, FileText, AlertTriangle, Sparkles } from "lucide-react";
 import ATSScorePanel from "./ATSScorePanel";
 import { analyzeResume } from "@/lib/atsAnalyzer";
 import { useResume } from "@/contexts/ResumeContext";
@@ -31,6 +31,8 @@ export default function ResumeEditor() {
     const [activeSection, setActiveSection] = useState<FormSection>("personal");
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    const [jobDescription, setJobDescription] = useState<string>("");
+    const [jdPanelOpen, setJdPanelOpen] = useState<boolean>(false);
 
     // Rehydration from History
     const searchParams = useSearchParams();
@@ -97,12 +99,53 @@ export default function ResumeEditor() {
                         </div>
                     </div>
 
+                    {/* JD Optimization Context Panel */}
+                    <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                        <button
+                            type="button"
+                            onClick={() => setJdPanelOpen(!jdPanelOpen)}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                                {jobDescription ? "JD Context Active ✓" : "Add Job Description for AI Optimization"}
+                            </span>
+                            <span className="text-slate-400 text-[10px]">{jdPanelOpen ? "▲" : "▼"}</span>
+                        </button>
+                        {jdPanelOpen && (
+                            <div className="px-4 pb-4 pt-1 space-y-2">
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Paste a job description to tailor AI optimization to this role. The AI will align language and emphasis — it will not add skills you do not have.
+                                </p>
+                                <textarea
+                                    value={jobDescription}
+                                    onChange={(e) => setJobDescription(e.target.value.substring(0, 5000))}
+                                    rows={4}
+                                    className="w-full h-28 resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-xs placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-800 dark:text-white dark:border-slate-700 custom-scrollbar"
+                                    placeholder="Paste job description here..."
+                                />
+                                <div className="flex justify-between items-center text-[11px] text-slate-400">
+                                    <span>{jobDescription.length}/5000 characters</span>
+                                    {jobDescription && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setJobDescription("")}
+                                            className="text-slate-500 hover:text-red-500 underline transition-colors"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                         {activeSection === "personal" && (
-                            <PersonalInfoForm data={resume.personalInfo} onChange={(personalInfo) => updateResume({ personalInfo })} />
+                            <PersonalInfoForm data={resume.personalInfo} onChange={(personalInfo) => updateResume({ personalInfo })} jobDescription={jobDescription} />
                         )}
                         {activeSection === "experience" && (
-                            <ExperienceForm data={resume.experience} onChange={(data) => updateResume({ experience: data })} />
+                            <ExperienceForm data={resume.experience} onChange={(data) => updateResume({ experience: data })} jobDescription={jobDescription} />
                         )}
                         {activeSection === "education" && (
                             <EducationForm data={resume.education} onChange={(data) => updateResume({ education: data })} />
@@ -111,13 +154,13 @@ export default function ResumeEditor() {
                             <SkillsForm data={resume.skills} onChange={(data) => updateResume({ skills: data })} />
                         )}
                         {activeSection === "projects" && (
-                            <ProjectsForm data={resume.projects} onChange={(data) => updateResume({ projects: data })} />
+                            <ProjectsForm data={resume.projects} onChange={(data) => updateResume({ projects: data })} jobDescription={jobDescription} />
                         )}
                         {activeSection === "achievements" && (
-                            <AchievementsForm data={resume.achievements} onChange={(data) => updateResume({ achievements: data })} />
+                            <AchievementsForm data={resume.achievements} onChange={(data) => updateResume({ achievements: data })} jobDescription={jobDescription} />
                         )}
                         {activeSection === "certifications" && (
-                            <CertificationsForm data={resume.certifications} onChange={(data) => updateResume({ certifications: data })} />
+                            <CertificationsForm data={resume.certifications} onChange={(data) => updateResume({ certifications: data })} jobDescription={jobDescription} />
                         )}
                     </div>
 

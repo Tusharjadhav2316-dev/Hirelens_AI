@@ -11,11 +11,13 @@ import { useAuth } from "@/contexts/AuthContext";
 interface Props {
     data: Project[];
     onChange: (data: Project[]) => void;
+    jobDescription?: string;
 }
 
-export default function ProjectsForm({ data, onChange }: Props) {
+export default function ProjectsForm({ data, onChange, jobDescription }: Props) {
     const { user } = useAuth();
-    const [improvingId, setImprovingId] = useState<string | null>(null);
+    const [activeItemId, setActiveItemId] = useState<string | null>(null);
+    const [isImproving, setIsImproving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [improvedText, setImprovedText] = useState("");
     const [errorId, setErrorId] = useState<string | null>(null);
@@ -50,29 +52,34 @@ export default function ProjectsForm({ data, onChange }: Props) {
         }
 
         setErrorId(null);
-        setImprovingId(item.id);
+        setActiveItemId(item.id);
+        setIsImproving(true);
         setModalOpen(true);
         setImprovedText("");
 
         try {
             const token = await user?.getIdToken() || "";
-            const improved = await improveSection("projects", currentDesc, token);
+            const improved = await improveSection("projects", currentDesc, token, jobDescription);
             setImprovedText(improved);
         } catch (err: any) {
             setModalOpen(false);
             setErrorId(item.id);
             setErrorMsg(err.message || "Failed to optimize project description.");
         } finally {
-            setImprovingId(null);
+            setIsImproving(false);
         }
     };
 
-    const handleAcceptImprovement = () => {
-        if (improvingId && improvedText) {
-            handleChange(improvingId, "description", improvedText);
+    const handleAcceptImprovement = (finalText: string) => {
+        if (activeItemId && finalText) {
+            handleChange(activeItemId, "description", finalText);
         }
+        handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
         setModalOpen(false);
-        setImprovingId(null);
+        setActiveItemId(null);
         setImprovedText("");
     };
 
@@ -146,11 +153,11 @@ export default function ProjectsForm({ data, onChange }: Props) {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleImproveSubmit(item)}
-                                    disabled={improvingId === item.id || modalOpen}
+                                    disabled={(isImproving && activeItemId === item.id) || modalOpen}
                                     className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-500/10 transition-colors"
                                 >
-                                    <Sparkles className={`w-4 h-4 mr-1.5 ${improvingId === item.id ? "animate-pulse" : ""}`} />
-                                    {improvingId === item.id ? "Optimizing..." : "Optimize with AI"}
+                                    <Sparkles className={`w-4 h-4 mr-1.5 ${isImproving && activeItemId === item.id ? "animate-pulse" : ""}`} />
+                                    {isImproving && activeItemId === item.id ? "Optimizing..." : "Optimize with AI"}
                                 </Button>
                             </div>
 
@@ -182,11 +189,16 @@ export default function ProjectsForm({ data, onChange }: Props) {
 
             <AIImprovementModal
                 isOpen={modalOpen}
-                onClose={() => !improvingId && setModalOpen(false)}
+                onClose={handleCloseModal}
                 onAccept={handleAcceptImprovement}
-                originalText={data.find(proj => proj.id === improvingId)?.description || improvingId || ""}
+                onRegenerate={() => {
+                    const item = data.find((i) => i.id === activeItemId);
+                    if (item) handleImproveSubmit(item);
+                }}
+                originalText={data.find((proj) => proj.id === activeItemId)?.description || ""}
                 improvedText={improvedText}
-                isImproving={!!improvingId}
+                isImproving={isImproving}
+                isJdActive={!!jobDescription}
             />
         </div>
     );
