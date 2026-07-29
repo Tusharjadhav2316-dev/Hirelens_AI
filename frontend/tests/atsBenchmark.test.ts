@@ -225,28 +225,41 @@ Machine Learning, Spring Boot, REST API, Google Gemini API
 
     console.log("\n6. Short Skill Word-Boundary Matching Verification (atsAnalyzer.ts):");
     const goFalseResume: Resume = {
+        id: "test-go-false",
+        title: "Test Go False",
+        template: "modern",
         personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Going forward, I will use Google tools and ship via cargo." },
         experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Going forward, I will manage Google infrastructure and ship cargo." }],
         education: [],
         skills: [{ id: "s1", name: "Go", level: "Intermediate" }],
-        projects: []
+        projects: [],
+        achievements: [],
+        certifications: []
     };
     const resGoFalse = analyzeResume(goFalseResume);
     console.log(`   'Go' on 'going/google/cargo' text  : Keyword Density ${resGoFalse.keywordDensityScore} / 100 (Expected: 0)`);
     console.assert(resGoFalse.keywordDensityScore === 0, `Skill 'Go' should NOT match 'going', 'google', or 'cargo'. Got ${resGoFalse.keywordDensityScore}`);
 
     const goTrueResume: Resume = {
+        id: "test-go-true",
+        title: "Test Go True",
+        template: "modern",
         personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Engineered scalable microservices in Go." },
         experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Developed backend APIs in Go and PostgreSQL." }],
         education: [],
         skills: [{ id: "s1", name: "Go", level: "Intermediate" }],
-        projects: []
+        projects: [],
+        achievements: [],
+        certifications: []
     };
     const resGoTrue = analyzeResume(goTrueResume);
     console.log(`   'Go' on standalone 'Go' text        : Keyword Density ${resGoTrue.keywordDensityScore} / 100 (Expected: 100)`);
     console.assert(resGoTrue.keywordDensityScore === 100, `Skill 'Go' SHOULD match standalone 'Go'. Got ${resGoTrue.keywordDensityScore}`);
 
     const shortSkillsResume: Resume = {
+        id: "test-short-skills",
+        title: "Test Short Skills",
+        template: "modern",
         personalInfo: { fullName: "Test User", email: "test@example.com", phone: "555-0199", location: "San Francisco, CA", portfolioUrl: "", linkedinUrl: "", summary: "Data analysis in R, systems programming in C, cloud infrastructure on AWS." },
         experience: [{ id: "e1", company: "Tech Co", position: "Developer", startDate: "2020", endDate: "2023", current: false, description: "Statistical models in R, kernel modules in C, deployed on AWS." }],
         education: [],
@@ -255,7 +268,9 @@ Machine Learning, Spring Boot, REST API, Google Gemini API
             { id: "s2", name: "C", level: "Intermediate" },
             { id: "s3", name: "AWS", level: "Intermediate" }
         ],
-        projects: []
+        projects: [],
+        achievements: [],
+        certifications: []
     };
     const resShortSkills = analyzeResume(shortSkillsResume);
     console.log(`   Short skills ('R', 'C', 'AWS') text : Keyword Density ${resShortSkills.keywordDensityScore} / 100 (Expected: 100)`);
