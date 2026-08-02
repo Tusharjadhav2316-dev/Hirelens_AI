@@ -23,7 +23,9 @@ import {
     Folder,
     Star,
     ChevronRight,
-    Briefcase
+    Briefcase,
+    Paperclip,
+    Loader2
 } from "lucide-react";
 import { analyzeResume } from "@/lib/atsAnalyzer";
 import { ChatMessage, trimConversationHistory, buildResumeContextBlock, hasResumeContent, buildATSContextBlock, ATSContextInput } from "@/lib/careerCoachService";
@@ -38,6 +40,12 @@ const STARTER_QUESTIONS = [
 ];
 
 const MAX_INPUT_LENGTH = 3800;
+
+interface AttachedDoc {
+    name: string;
+    size: number;
+    text: string;
+}
 
 function mapErrorToUserMessage(err: unknown): string {
     const raw = err instanceof Error ? err.message.toLowerCase() : "";
@@ -66,6 +74,11 @@ export default function CareerCoachPage() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Document Attachment State
+    const [attachedDoc, setAttachedDoc] = useState<AttachedDoc | null>(null);
+    const [isParsingDoc, setIsParsingDoc] = useState<boolean>(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     // Job Description panel & Context Inspector state
     const [jobDescription, setJobDescription] = useState<string>("");
     const [jdPanelOpen, setJdPanelOpen] = useState<boolean>(false);
@@ -78,9 +91,19 @@ export default function CareerCoachPage() {
     const turnCount = Math.floor(messages.length / 2);
 
     // Memoize resume context block so it only rebuilds when resume changes
-    const resumeContextString = useMemo(() => {
+    const baseResumeContextString = useMemo(() => {
         return hasResumeContent(resume) ? buildResumeContextBlock(resume) : undefined;
     }, [resume]);
+
+    // Combine base resume context with attached uploaded document (if any)
+    const combinedResumeContextString = useMemo(() => {
+        let ctx = baseResumeContextString || "";
+        if (attachedDoc && attachedDoc.text) {
+            const docBlock = `=== UPLOADED DOCUMENT ATTACHMENT: ${attachedDoc.name} ===\n(Candidate uploaded this file directly in chat. Answer questions referencing its contents.)\n\n${attachedDoc.text.substring(0, 3500)}\n=== END UPLOADED DOCUMENT ===`;
+            ctx = ctx ? `${ctx}\n\n${docBlock}` : docBlock;
+        }
+        return ctx || undefined;
+    }, [baseResumeContextString, attachedDoc]);
 
     // Memoize ATS Analysis computation
     const atsResult = useMemo(() => {
@@ -96,6 +119,63 @@ export default function CareerCoachPage() {
     const cleanedJobDescription = useMemo(() => {
         return jobDescription.trim();
     }, [jobDescription]);
+
+    // File Upload Handler (PDF, TXT, MD, DOCX)
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        e.target.value = "";
+
+        if (file.size > 5 * 1024 * 1024) {
+            setError("File size exceeds 5MB limit.");
+            return;
+        }
+
+        setIsParsingDoc(true);
+        setError(null);
+
+        try {
+            let extractedText = "";
+
+            if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const idToken = await user?.getIdToken();
+                const res = await fetch("/api/parse-pdf", {
+                    method: "POST",
+                    headers: idToken ? { Authorization: `Bearer ${idToken}` } : {},
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || "Failed to parse PDF file.");
+                }
+
+                const data = await res.json();
+                extractedText = data.text || "";
+            } else {
+                extractedText = await file.text();
+            }
+
+            if (!extractedText.trim()) {
+                throw new Error("Could not extract text from the selected file.");
+            }
+
+            setAttachedDoc({
+                name: file.name,
+                size: file.size,
+                text: extractedText.trim()
+            });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Failed to read attached file.";
+            setError(msg);
+        } finally {
+            setIsParsingDoc(false);
+        }
+    };
 
     // Auto-resize textarea logic up to 128px
     useEffect(() => {
@@ -118,6 +198,7 @@ export default function CareerCoachPage() {
         }
         setMessages([]);
         setInputValue("");
+        setAttachedDoc(null);
         setIsStreaming(false);
         setError(null);
     };
@@ -168,7 +249,7 @@ export default function CareerCoachPage() {
                 },
                 body: JSON.stringify({
                     messages: trimmedHistory,
-                    resumeContext: resumeContextString,
+                    resumeContext: combinedResumeContextString,
                     atsContext: atsContextString,
                     jobDescription: cleanedJobDescription.length >= 20 ? cleanedJobDescription : undefined
                 }),
@@ -226,17 +307,26 @@ export default function CareerCoachPage() {
     };
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-8rem)] max-w-4xl mx-auto px-3 sm:px-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="flex flex-col h-[calc(100vh-6.5rem)] w-full max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm overflow-hidden">
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf,.txt,.md,.doc,.docx"
+                onChange={handleFileSelect}
+                className="hidden"
+            />
+
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 flex-shrink-0">
                 <div className="flex items-center gap-3.5">
                     {/* Header Icon Badge */}
-                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
-                        <MessageSquare className="w-6 h-6" />
+                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+                        <MessageSquare className="w-5.5 h-5.5" />
                         <Sparkles className="w-3.5 h-3.5 absolute top-1 right-1 text-blue-200" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             HireLens Career Coach
                             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
                                 Beta
@@ -260,14 +350,14 @@ export default function CareerCoachPage() {
             </div>
 
             {/* Context Status Bar */}
-            <div className="px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
+            <div className="px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2 overflow-hidden">
-                    {hasResumeContent(resume) ? (
+                    {hasResumeContent(resume) || attachedDoc ? (
                         <>
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                            <span className="font-semibold text-emerald-700 dark:text-emerald-400">Resume context active</span>
+                            <span className="font-semibold text-emerald-700 dark:text-emerald-400">Context active</span>
                             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <span className="truncate max-w-xs">{resume.personalInfo.fullName || resume.title || "Resume Profile"}</span>
+                            <span className="truncate max-w-xs">{attachedDoc ? `Doc: ${attachedDoc.name}` : (resume.personalInfo.fullName || resume.title || "Resume Profile")}</span>
                             {atsResult && (
                                 <>
                                     <span className="text-slate-300 dark:text-slate-600">•</span>
@@ -283,9 +373,9 @@ export default function CareerCoachPage() {
                             <span className="font-semibold text-amber-700 dark:text-amber-400">No resume loaded</span>
                             <span className="text-slate-300 dark:text-slate-600">—</span>
                             <Link href="/dashboard/builder" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                                Add resume details
+                                Add details
                             </Link>
-                            <span>for personalized coaching.</span>
+                            <span>or attach a document below.</span>
                         </>
                     )}
                 </div>
@@ -302,16 +392,16 @@ export default function CareerCoachPage() {
 
             {/* Context Inspector Panel */}
             {inspectorOpen && (
-                <div className="p-3.5 bg-slate-100/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs space-y-2 text-slate-700 dark:text-slate-300">
+                <div className="p-3.5 bg-slate-100/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs space-y-2 text-slate-700 dark:text-slate-300 flex-shrink-0">
                     <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <Info className="w-3.5 h-3.5 text-blue-500" />
                         Active Context Inspector
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                         <div>• Resume Context: <span className="font-medium">{hasResumeContent(resume) ? "Active" : "None"}</span></div>
+                        <div>• Attached Document: <span className="font-medium">{attachedDoc ? `${attachedDoc.name} (${(attachedDoc.size / 1024).toFixed(1)} KB)` : "None"}</span></div>
                         <div>• ATS Intelligence: <span className="font-medium">{atsResult ? `${Math.round(atsResult.overallScore)}/100 (HireLens ATS Engine)` : "None"}</span></div>
                         <div>• Job Description: <span className="font-medium">{cleanedJobDescription.length >= 20 ? `Active (${cleanedJobDescription.length} chars)` : "None"}</span></div>
-                        <div>• Conversation History: <span className="font-medium">{turnCount} / 8 context turns ({messages.length} messages)</span></div>
                     </div>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 italic border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5">
                         Note: ATS scores are computed by the deterministic HireLens ATS Engine, not generated or recalculated by AI.
@@ -320,7 +410,7 @@ export default function CareerCoachPage() {
             )}
 
             {/* Optional Job Description Panel */}
-            <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20">
+            <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20 flex-shrink-0">
                 <button
                     type="button"
                     onClick={() => setJdPanelOpen(!jdPanelOpen)}
@@ -372,7 +462,7 @@ export default function CareerCoachPage() {
 
             {/* Conversation Length Warning Banner (>= 6 turns) */}
             {turnCount >= 6 && (
-                <div className="mx-4 mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+                <div className="mx-4 mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between flex-shrink-0">
                     <span>
                         Earlier messages may fall outside the coaching context window.{" "}
                         <button
@@ -501,28 +591,62 @@ export default function CareerCoachPage() {
 
             {/* Error Banner */}
             {error && (
-                <div className="mx-4 mb-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <div className="mx-4 mb-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2 flex-shrink-0">
                     <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
                     <span>{error}</span>
                 </div>
             )}
 
             {/* Input Form */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0 space-y-2">
+                {/* Document Parsing Spinner */}
+                {isParsingDoc && (
+                    <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-medium animate-pulse">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Parsing attached document...</span>
+                    </div>
+                )}
+
+                {/* Attached Document Chip */}
+                {attachedDoc && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/80 text-xs text-blue-700 dark:text-blue-300 w-fit">
+                        <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <span className="font-semibold truncate max-w-xs">{attachedDoc.name}</span>
+                        <span className="text-[10px] text-blue-400">({(attachedDoc.size / 1024).toFixed(1)} KB)</span>
+                        <button
+                            type="button"
+                            onClick={() => setAttachedDoc(null)}
+                            className="ml-1 text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                )}
+
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
                         handleSend();
                     }}
-                    className="flex gap-2.5 items-end"
+                    className="flex gap-2 items-end"
                 >
+                    {/* Upload Attachment Button */}
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Upload resume or document (PDF, TXT, DOCX)"
+                        className="h-11 w-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all flex items-center justify-center flex-shrink-0"
+                    >
+                        <Paperclip className="w-5 h-5" />
+                    </button>
+
                     <textarea
                         ref={textareaRef}
                         style={{ minHeight: "44px" }}
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value.slice(0, MAX_INPUT_LENGTH))}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask HireLens Career Coach a question..."
+                        placeholder={attachedDoc ? `Ask a question about ${attachedDoc.name}...` : "Ask HireLens Career Coach a question..."}
                         className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:bg-white dark:focus:bg-slate-800 transition-all custom-scrollbar overflow-y-auto"
                     />
 
@@ -536,12 +660,12 @@ export default function CareerCoachPage() {
                     </button>
                 </form>
 
-                <p className="mt-2 text.5-[11px] text-center text-slate-400 dark:text-slate-500">
+                <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
                     The Coach uses your HireLens resume and ATS analysis as context. Responses are AI-generated coaching, not verified recruiter assessments.
                 </p>
 
                 {inputValue.length > 2000 && (
-                    <p className={`mt-1 text-[10px] text-center font-medium ${inputValue.length > 3500 ? "text-red-500 font-semibold" : "text-slate-400 dark:text-slate-500"}`}>
+                    <p className={`text-[10px] text-center font-medium ${inputValue.length > 3500 ? "text-red-500 font-semibold" : "text-slate-400 dark:text-slate-500"}`}>
                         {inputValue.length} / {MAX_INPUT_LENGTH} characters
                     </p>
                 )}
