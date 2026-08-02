@@ -7,9 +7,9 @@
 ```mermaid
 flowchart TD
     subgraph Client["Browser — Next.js 16 App Router / React 19 (frontend/app)"]
-        Pages["Pages: /login, /signup, /dashboard, /dashboard/builder,\n/dashboard/resume-analyzer, /dashboard/job-matcher,\n/dashboard/cover-letter, /dashboard/history, /dashboard/settings"]
+        Pages["Pages: /login, /signup, /dashboard, /dashboard/builder,\n/dashboard/career-coach, /dashboard/resume-analyzer, /dashboard/job-matcher,\n/dashboard/cover-letter, /dashboard/history, /dashboard/settings"]
         Contexts["AuthContext.tsx (Firebase Auth listener)\nResumeContext.tsx (global resume JSON, unmemoized)"]
-        LocalEngines["Client-side scoring engines:\natsAnalyzer.ts / atsEngine.ts / jdMatcher.ts (no network call)"]
+        LocalEngines["Client-side scoring engines:\natsAnalyzer.ts / atsEngine.ts / jdMatcher.ts / careerCoachService.ts (no network call)"]
         ClientPDF["pdfjs-dist (PdfEditableViewer.tsx) — client-side PDF text extraction"]
     end
 
@@ -24,6 +24,7 @@ flowchart TD
         AiInsights["POST /api/ai-insights"]
         JdRefine["POST /api/jd-refine"]
         CoverLetter["POST /api/cover-letter"]
+        CareerCoach["POST /api/career-coach (ReadableStream SSE Token Streaming)"]
     end
 
     OpenRouter["OpenRouter API\n(google/gemini-2.0-flash-lite-001)"]
@@ -136,3 +137,65 @@ flowchart TD
 | `tests/optimizerSafety.test.ts` | Prompt guardrail presence, mode validation, JD injection | `npx tsx tests/optimizerSafety.test.ts` |
 
 Both test files are plain TypeScript, no test framework. Both exit with code 1 on assertion failure.
+
+---
+
+## Sprint 6 Architecture — AI Career Coach
+
+### New Components
+
+**`lib/careerCoachService.ts`** — Pure client-side helper module (no side effects, no network calls). Exports:
+- `ChatMessage`, `CareerCoachRequest`, `ATSContextInput` type definitions
+- `buildResumeContextBlock(resume)` → structured plaintext (≤4000 tokens)
+- `buildATSContextBlock(ats)` → labelled deterministic engine output block
+- `buildJDContextBlock(jd)` → job description block with non-fabrication instruction
+- `trimConversationHistory(messages, maxTurns=8)` → last N turns
+- `hasResumeContent(resume)` → boolean
+Fully testable without mocking. Tested in `tests/careerCoachSafety.test.ts`.
+
+**`app/api/career-coach/route.ts`** — Authenticated streaming POST endpoint.
+- Auth: `verifyAuth()` (same Firebase Admin pattern as all other AI routes)
+- Input: `{ messages: ChatMessage[], resumeContext?, atsContext?, jobDescription? }`
+- Validation: per-message length limit (4000 chars), role validation, field type checks
+- History: server-enforces `trimConversationHistory(messages, 8)`
+- Provider: OpenRouter `google/gemini-2.5-flash`, `stream: true`
+- Response: `text/plain; charset=utf-8` streaming via native `ReadableStream`
+- Error cases: 401 (auth), 400 (validation), 429 (rate limit), 502 (provider error)
+
+**`app/dashboard/career-coach/page.tsx`** — Client component under `/dashboard/career-coach`.
+- State: `messages`, `inputValue`, `isStreaming`, `error`, `jobDescription`, `jdPanelOpen`, `inspectorOpen`
+- Context: `useAuth()` (Firebase token), `useResume()` (live resume data via `ResumeProvider` already in `layout.tsx`)
+- Streaming: `fetch` + `response.body.getReader()` + `TextDecoder` — no new packages
+- Cancellation: `AbortController` per request; cancelled on reset or unmount
+- ATS: `analyzeResume(resume, false)` called client-side; result formatted via `buildATSContextBlock`
+- Conversation history: last 8 turns sent on each request; turn count warning at ≥ 6 turns
+
+### Navigation Update
+`components/Sidebar.tsx` — `MessageSquare` icon added; "AI Career Coach" nav item is second entry (after Dashboard, before Resume Builder).
+
+### Streaming Pattern (first use in codebase)
+```
+Server: new Response(new ReadableStream({...}), { Content-Type: "text/plain" })
+Client: fetch(...) → response.body.getReader() → while (true) { reader.read() → decode → accumulate → setState }
+```
+No WebSockets, no `EventSource`, no SSE client protocol — raw streamed text.
+
+### Career Coach Truth-Preservation Architecture
+```
+CAREER_COACH_SYSTEM_PROMPT (in promptTemplates.ts)
+  ↓ contains: HALLUCINATION_GUARDRAIL + ATS attribution rules + identity constraints
+      ↓
+buildATSContextBlock() labels scores: "DETERMINISTIC ENGINE OUTPUT — not by AI estimation"
+      ↓
+buildResumeContextBlock() labels data: "from the candidate's HireLens resume — not from AI inference"
+      ↓
+buildJDContextBlock() labels JD: "do not claim candidate has skills not present in their resume"
+```
+Automated tests in `careerCoachSafety.test.ts` verify all three labels are present before any code ships.
+
+### Testing Infrastructure (post Sprint 6)
+| File | Tests | Runner |
+|---|---|---|
+| `tests/atsBenchmark.test.ts` | ATS scoring accuracy, quality hierarchy | `npx tsx tests/atsBenchmark.test.ts` |
+| `tests/optimizerSafety.test.ts` | Prompt guardrails, optimizer modes, JD injection | `npx tsx tests/optimizerSafety.test.ts` |
+| `tests/careerCoachSafety.test.ts` | Coach prompt rules, context builders, history trimming | `npx tsx tests/careerCoachSafety.test.ts` |

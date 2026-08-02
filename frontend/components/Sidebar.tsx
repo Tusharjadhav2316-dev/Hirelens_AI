@@ -11,6 +11,7 @@ import {
     Mail,
     History,
     Settings,
+    MessageSquare,
     X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,12 +23,14 @@ interface SidebarProps {
 
 const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "AI Career Coach", href: "/dashboard/career-coach", icon: MessageSquare },
     { name: "Resume Builder", href: "/dashboard/builder", icon: FileEdit },
     { name: "Resume Analyzer", href: "/dashboard/resume-analyzer", icon: Search },
     { name: "Job Matcher", href: "/dashboard/job-matcher", icon: Target },
     { name: "Cover Letter", href: "/dashboard/cover-letter", icon: Mail },
     { name: "Resume History", href: "/dashboard/history", icon: History },
 ];
+
 
 export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
     const pathname = usePathname();

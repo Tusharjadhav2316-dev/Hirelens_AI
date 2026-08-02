@@ -31,3 +31,11 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 5 | 3 | Add JD context panel to `ResumeEditor`; wire `jobDescription` to all 5 forms | `Sprint_05/Day_03.md` |
 | 5 | 4 | Upgrade `AIImprovementModal` with Regenerate, editable output, mode + JD badges | `Sprint_05/Day_04.md` |
 | 5 | 5 | Create `tests/optimizerSafety.test.ts`; full Sprint 5 regression | `Sprint_05/Day_05.md` |
+| 6 | 1 | Add `CAREER_COACH_SYSTEM_PROMPT`, `CAREER_COACH_MODEL_PARAMS`; create `careerCoachService.ts` | `Sprint_06/Day_01.md` |
+| 6 | 2 | Authenticated streaming Career Coach API route | `Sprint_06/Day_02.md` |
+| 6 | 3 | Career Coach page shell + Sidebar navigation entry | `Sprint_06/Day_03.md` |
+| 6 | 4 | Real streaming fetch + multi-turn conversation state | `Sprint_06/Day_04.md` |
+| 6 | 5 | Resume context grounding via `buildResumeContextBlock` | `Sprint_06/Day_05.md` |
+| 6 | 6 | ATS intelligence grounding + JD context panel | `Sprint_06/Day_06.md` |
+| 6 | 7 | UX hardening — errors, input limits, context inspector, responsive | `Sprint_06/Day_07.md` |
+| 6 | 8 | `tests/careerCoachSafety.test.ts` — 37 assertions + 5 manual QA | `Sprint_06/Day_08.md` |

@@ -145,3 +145,37 @@
 **Reason:** Sprint 5 Day 1 implemented five optimization modes (`ats`, `impact`, `concise`, `action-verbs`, `jd-align`) in prompt architecture and backend API, but form components hardcoded or omitted mode selection, preventing users from intentionally choosing their rewrite strategy.
 **Alternatives Considered:** Adding mode selection inside `AIImprovementModal` after generation (rejected — mode controls the generation prompt itself, so strategy selection belongs before/during the generation trigger). Adding a generic "Proceed" button to the JD context panel (rejected — JD panel provides context, section provides content, mode selector provides strategy).
 **Status:** Accepted
+
+---
+
+## Sprint 6 Decisions
+
+### [Sprint 6, Day 1] Stateless API + client-side conversation state, no Firestore persistence
+**Decision:** Career Coach conversation history lives in React `useState` on the client. No session storage, no Firestore writes in Sprint 6. Each request sends the trimmed history in the body.
+**Reason:** Simpler architecture; avoids Firestore schema changes; cross-session memory is a richer feature (requires a "Career Memory" concept, indexing, retrieval) that belongs in a dedicated sprint, not bolted onto Sprint 6.
+**Alternatives Considered:** Persist conversations to Firestore per user (deferred — significant scope increase); Use `sessionStorage` (rejected — lost on tab close, no value over React state for same-session use).
+**Status:** Accepted. Deferred: cross-session Career Memory added to backlog for Sprint 10+.
+
+### [Sprint 6, Day 2] Use native ReadableStream streaming — no new packages
+**Decision:** Implement streaming via native `ReadableStream` on the server and `response.body.getReader()` on the client. No `EventSource`, no SSE client library, no WebSockets, no `socket.io`.
+**Reason:** Next.js 16 App Router with Node 18+ supports native streaming without any additional dependencies. The Career Coach is the first and only streaming feature — introducing a streaming library for one feature would be over-engineering.
+**Alternatives Considered:** SSE with `EventSource` client (rejected — requires specific SSE format enforcement; raw text streaming is simpler for this use case); WebSockets (rejected — significant infrastructure addition for a request-response pattern that happens to stream).
+**Status:** Accepted
+
+### [Sprint 6, Day 2] Reuse `google/gemini-2.5-flash` — no model change for Career Coach
+**Decision:** Use the same model as `api/ai-improve` (confirmed as `google/gemini-2.5-flash` post-Sprint-5). No separate model configuration for the Career Coach.
+**Reason:** Consistency; the model already handles resume-domain tasks well; separate model selection would require a new environment variable and testing overhead.
+**Alternatives Considered:** Use a different model for conversation (e.g., a chat-optimized model) — deferred to a future sprint if quality proves insufficient.
+**Status:** Accepted
+
+### [Sprint 6, Day 5/6] ATS scores remain deterministic — Coach explains, never recalculates
+**Decision:** `analyzeResume(resume, false)` is called client-side; the result is formatted by `buildATSContextBlock()` with explicit "DETERMINISTIC ENGINE OUTPUT" labelling and sent to the Coach as context. The Coach's system prompt instructs it to attribute scores with "According to your HireLens ATS analysis..." — never "I calculated..."
+**Reason:** This is the most important integrity constraint in Sprint 6. If the Coach recalculated scores itself using AI estimation, it would produce inconsistent, hallucinated scores that contradict the deterministic engine output shown in `ATSScorePanel`. Users would receive contradictory information from the same product.
+**Alternatives Considered:** Let the Coach calculate its own ATS assessment (rejected — definitively violates the deterministic/AI boundary principle established in Sprints 3-4).
+**Status:** Accepted
+
+### [Sprint 6, Day 3] "AI Career Coach" positioned second in Sidebar (after Dashboard)
+**Decision:** The Career Coach nav entry is the second item in the Sidebar, immediately after Dashboard and before Resume Builder.
+**Reason:** The Coach is the most distinctive, highest-value differentiator of HireLens 2.0 vs. competing tools. Positioning it prominently signals to users that this is a primary feature, not a hidden utility.
+**Alternatives Considered:** Place it after Resume Analyzer (more logical tool grouping but de-emphasizes the Coach's importance); Place it first above Dashboard (too aggressive — Dashboard is the natural entry point).
+**Status:** Accepted

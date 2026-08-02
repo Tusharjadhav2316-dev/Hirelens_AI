@@ -39,7 +39,8 @@
 ## AI / External APIs
 | Service | Purpose | Confirmed Via |
 |---|---|---|
-| OpenRouter (`google/gemini-2.0-flash-lite-001`) | All AI completions: resume improvement, insights, JD refinement, cover letters | `BACKEND_AUDIT.md` §1–2 |
+| OpenRouter (`google/gemini-2.5-flash`) | All AI completions: resume improvement, insights, JD refinement, cover letters, career coaching | `BACKEND_AUDIT.md` §1–2, Sprint 5 & 6 |
+| Streaming Pattern | Native Serverless `ReadableStream` + client `TextDecoder` SSE token parsing (`/api/career-coach`) | Sprint 6 Day 2 & 4 implementation |
 | Env variable | `OPENROUTER_API_KEY` (server-side only) | `ENVIRONMENT_VERIFICATION.md` §3 |
 
 ## Agent Orchestration
@@ -62,3 +63,24 @@
 |---|---|---|
 | CI/CD | None found | `PROJECT_DISCOVERY.md` |
 | Build command | `npm run build` — currently **failing** | `ENVIRONMENT_VERIFICATION.md` §4 |
+
+---
+
+## Sprint 6 Additions
+
+### New Streaming Pattern
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Server streaming | Native `ReadableStream` (Node 18+, no new package) | Sprint 6, Day 2 — `app/api/career-coach/route.ts` |
+| Client stream reading | Native `fetch` + `response.body.getReader()` + `TextDecoder` | Sprint 6, Day 4 — `app/dashboard/career-coach/page.tsx` |
+| Request cancellation | Native `AbortController` | Sprint 6, Day 4 |
+
+### Career Coach Module
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Coach API route | Next.js App Router POST handler | Sprint 6, Day 2 |
+| Auth on Coach route | Firebase Admin SDK (existing `verifyAuth.ts`) | Sprint 6, Day 2 |
+| Coach model | `google/gemini-2.5-flash` (same as `ai-improve`) | Sprint 6, Day 2 |
+| Resume context | `useResume()` + `buildResumeContextBlock()` — client-side pure function | Sprint 6, Day 5 |
+| ATS context | `analyzeResume()` (deterministic, client-side) + `buildATSContextBlock()` | Sprint 6, Day 6 |
+| Conversation state | React `useState` — session-only, not persisted | Sprint 6 Decision Log |

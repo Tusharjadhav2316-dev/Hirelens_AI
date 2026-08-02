@@ -83,3 +83,117 @@
 
 ## How to Use This Document
 Add a wireframe here before a sprint that builds a new screen — it becomes the lightweight spec everyone (including future-you) agrees on before code is written. Update it if the implemented UI diverges meaningfully, so it stays a reliable reference rather than going stale.
+
+---
+
+## AI Career Coach Page (`/dashboard/career-coach`)
+
+### Desktop Layout
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ [●] HireLens                                                 [User] │
+├──────────────┬──────────────────────────────────────────────────────┤
+│ Dashboard    │  [💬] AI Career Coach                                │
+│ AI Career ●  │  Powered by your resume & HireLens ATS intelligence  │
+│ Resume Bld   │  [● Resume context active] [● ATS score: 72/100]     │
+│ Analyzer     │  [ℹ️ Context ▼]                                      │
+│ Job Match    ├──────────────────────────────────────────────────────┤
+│ Cover Ltr    │  [▼ Add a Job Description for role-specific coaching] │
+│ History      ├──────────────────────────────────────────────────────┤
+│ Settings     │                                                       │
+│              │  ┌──────────────────────────────────────────────┐   │
+│              │  │                                              │   │
+│              │  │          [✨] Your AI Career Coach           │   │
+│              │  │                                              │   │
+│              │  │   Ask me anything about your resume, ATS    │   │
+│              │  │   scores, job applications, or strategy.    │   │
+│              │  │                                              │   │
+│              │  │  [What does my ATS score mean?]             │   │
+│              │  │  [How can I improve my summary?]            │   │
+│              │  │  [What skills should I add?]                │   │
+│              │  │  [How well do I match a senior role?]       │   │
+│              │  │  [Biggest weaknesses in my resume?]         │   │
+│              │  │  [Make my experience more impactful?]       │   │
+│              │  └──────────────────────────────────────────────┘   │
+│              ├──────────────────────────────────────────────────────┤
+│              │  ┌───────────────────────────────────────── [➤] ┐   │
+│              │  │ Ask your Career Coach... (Shift+Enter newline)│   │
+│              │  └───────────────────────────────────────────────┘   │
+│              │  The Coach uses your resume & ATS analysis as context│
+└──────────────┴──────────────────────────────────────────────────────┘
+```
+
+### Active Conversation State
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ [💬] AI Career Coach            [↺ New conversation]             │
+│ [● Resume context active] [● ATS score: 72/100] [ℹ️ Context ▼]  │
+│ [▼ Job Description Active ✓]                                     │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│                         ┌─────────────────────────────────────┐ │
+│                         │ What does my impact score of 20/100 │ │
+│                         │ mean?                    [👤]       │ │
+│                         └─────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ [🤖] According to your HireLens ATS analysis, your      │    │
+│  │ Impact & Metrics score is 20/100. This score reflects   │    │
+│  │ that no quantified achievements were detected in your   │    │
+│  │ resume content...                                       │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│                         ┌─────────────────────────────────────┐ │
+│                         │ How can I fix that?      [👤]       │ │
+│                         └─────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ [🤖] ● ● ●  (streaming indicator)                      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────── [➤] ┐     │
+│  │ Type here...                                           │     │
+│  └────────────────────────────────────────────────────────┘     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Context Inspector Panel (when expanded)
+```
+┌──────────────────────────────────────────────────────────────┐
+│ What the Coach receives in each request:                     │
+│ ✅ Resume: loaded                                            │
+│ ✅ ATS Analysis: overall score 72/100 included               │
+│ ✅ Job Description: active (1,240 chars)                     │
+│ 📊 Conversation history: 4 turns (max 8 before oldest trimmed│
+│ ATS scores are computed by HireLens's deterministic engine   │
+│ — the Coach explains them, not recalculates them.           │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Mobile Layout (≤ 640px)
+```
+┌─────────────────────────────────┐
+│ [≡] HireLens         [User] ⚙️  │
+├─────────────────────────────────┤
+│ [💬] AI Career Coach            │
+│ [● Resume active] [ATS: 72/100] │
+├─────────────────────────────────┤
+│ [Chat message area — scrollable]│
+│                                 │
+│     ┌─────────────────────────┐ │
+│     │ What does my ATS...     │ │
+│     └─────────────────────────┘ │
+│ ┌───────────────────────────┐   │
+│ │ Here's what the score     │   │
+│ │ means...                  │   │
+│ └───────────────────────────┘   │
+├─────────────────────────────────┤
+│ ┌──────────────────────── [➤] ┐ │
+│ │ Ask anything...            │ │
+│ └────────────────────────────┘ │
+└─────────────────────────────────┘
+```
+
+### Design Notes
+- Message bubbles: user = right-aligned, blue (`bg-blue-600`); assistant = left-aligned, slate (`bg-slate-50 dark:bg-slate-800`)
+- Streaming indicator: three bouncing dots while `isStreaming=true`
+- Consistent with existing dashboard design system — no new design tokens introduced
+- Dark mode: all elements follow existing `dark:` Tailwind classes

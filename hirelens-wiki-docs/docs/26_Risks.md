@@ -148,3 +148,37 @@
 **Impact:** Long certification names may render oddly in some resume PDF layouts.
 **Mitigation:** Accepted as a pragmatic decision (logged in `20_Decision_Log.md`). Users can edit the name field after accepting. Proper fix: add `description?: string` to `Certification` type in a future sprint, along with UI and export updates.
 **Priority:** Low (known workaround, not a defect)
+
+---
+
+## Sprint 6 Specific Risks
+
+### Career Coach Hallucination — Primary Risk
+**Description:** The Coach could fabricate ATS scores, skills, or qualifications despite `HALLUCINATION_GUARDRAIL` and mode-specific instructions.
+**Impact:** Users receive false career advice that damages their job search or leads to misrepresentation on applications.
+**Mitigation:** Three-layer enforcement: (1) `CAREER_COACH_SYSTEM_PROMPT` contains "NEVER fabricate" instructions; (2) Context blocks are labelled with provenance ("from the candidate's HireLens resume", "DETERMINISTIC ENGINE OUTPUT"); (3) 37 automated tests verify guardrail presence in all prompt combinations; (4) 5 manual QA cases (C1–C5) verified in browser before Sprint 6 is marked complete.
+**Priority:** Critical — verified in Day 8 before Sprint 6 is closed
+
+### ATS Score Contradiction
+**Description:** The Coach could produce ATS score estimates that contradict the deterministic engine output shown in `ATSScorePanel`.
+**Impact:** User sees "72/100" in the panel and "approximately 55/100" from the Coach — undermines trust in both.
+**Mitigation:** `buildATSContextBlock()` includes the exact deterministic scores; `CAREER_COACH_SYSTEM_PROMPT` instructs the Coach to attribute scores with "According to your HireLens ATS analysis..." — tested by automated assertion `"System prompt teaches correct ATS score attribution phrasing"` in `careerCoachSafety.test.ts`.
+**Priority:** High
+
+### Streaming Edge Cases
+**Description:** Mid-stream disconnections, partial SSE chunk splits, or rapid user resets could leave the UI in an inconsistent state.
+**Impact:** Empty or partial messages visible; stale state updates on unmounted component.
+**Mitigation:** `AbortController` handles resets; `TextDecoder` with `{ stream: true }` handles partial chunks; cleanup `useEffect` aborts on unmount. These are tested manually in Day 4's verification steps.
+**Priority:** Medium
+
+### Context Window Drift (Long Conversations)
+**Description:** After 8+ turns, `trimConversationHistory` drops earliest messages. The Coach loses context about what the candidate said early in the conversation.
+**Impact:** The Coach appears to "forget" information from earlier in the session.
+**Mitigation:** A turn-count warning banner appears at ≥ 6 turns with a "New Conversation" link. `careerCoachSafety.test.ts` tests `trimConversationHistory` boundary behaviour. This is a fundamental limitation of stateless context windows, not a bug.
+**Priority:** Low (expected behaviour; user is informed)
+
+### Privacy: Resume Data in Client-Side Logs
+**Description:** `buildResumeContextBlock` produces a plaintext summary of the resume that is sent to OpenRouter via the server. The server logs this in error cases.
+**Impact:** Resume plaintext could appear in server logs.
+**Mitigation:** The API route only logs errors (`console.error`), not request bodies. No resume content is logged on success. For production (Sprint 14), server-side log scrubbing should be implemented.
+**Priority:** Low (pre-production; logged for Sprint 13/14)

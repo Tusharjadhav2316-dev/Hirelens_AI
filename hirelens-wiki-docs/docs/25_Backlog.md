@@ -88,3 +88,30 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Persist JD target per resume in Firestore | Session-only JD is sufficient for Sprint 5; persisted "saved JD targets" is a Job Tracker feature | Sprint 7 (Job Search & Application Tracker) |
 | Cover letter prompt full centralization (5 variants) | Deferred from Sprint 3 and Sprint 4 | Sprint 6 or dedicated cleanup sprint |
 | Firestore security rules audit | Deferred since Sprint 2 | Sprint 13 (Testing, Performance, Security) |
+
+---
+
+## Sprint 6 Items — AI Career Coach
+
+| Feature | Priority | Status | Sprint/Day | Notes |
+|---|---|---|---|---|
+| `lib/careerCoachService.ts` — type defs + pure context builders | High | Done (Sprint 6, Day 1) | Sprint 6, Day 1 | Pure functions; fully testable |
+| `CAREER_COACH_SYSTEM_PROMPT` + `CAREER_COACH_MODEL_PARAMS` in `promptTemplates.ts` | High | Done (Sprint 6, Day 1) | Sprint 6, Day 1 | Truth-preservation rules in system prompt |
+| `app/api/career-coach/route.ts` — authenticated streaming endpoint | High | Done (Sprint 6, Day 2) | Sprint 6, Day 2 | First streaming route in codebase |
+| Career Coach page shell + Sidebar entry | High | Done (Sprint 6, Day 3) | Sprint 6, Day 3 | `/dashboard/career-coach`, second in Sidebar |
+| Real streaming fetch + multi-turn conversation state | High | Done (Sprint 6, Day 4) | Sprint 6, Day 4 | AbortController; streaming token accumulation |
+| Resume context grounding (`useResume` + `buildResumeContextBlock`) | High | Done (Sprint 6, Day 5) | Sprint 6, Day 5 | Resume-aware personalized coaching |
+| ATS intelligence grounding + JD context panel | High | Done (Sprint 6, Day 6) | Sprint 6, Day 6 | Deterministic engine output explained by Coach |
+| UX hardening (error messages, input limits, context inspector, responsive) | Medium | Done (Sprint 6, Day 7) | Sprint 6, Day 7 | |
+| `tests/careerCoachSafety.test.ts` — 34 automated assertions + 5 manual cases | High | Done (Sprint 6, Day 8) | Sprint 6, Day 8 | |
+
+## Deferred From Sprint 6 (Candidates for Future Sprints)
+
+| Feature | Reason Deferred | Target Sprint |
+|---|---|---|
+| Cross-session Career Memory (persist conversations to Firestore) | Requires a dedicated memory/retrieval architecture; Sprint 6 scope is the conversational layer | Sprint 10 (Career Roadmap & Learning Engine) or dedicated memory sprint |
+| Coach-triggered tool actions (e.g., "Optimize my summary" from chat) | This is agent orchestration — Sprint 8 (CrewAI) territory | Sprint 8 |
+| Mode selector within the Coach ("Analyze my resume for ATS issues") | Blurs into CrewAI multi-agent territory; requires tool-calling infrastructure | Sprint 8 |
+| Cover letter prompt full centralization | Deferred since Sprint 3 | Remains deferred — low priority vs. Sprint 7+ features |
+| External job search integration | Sprint 7 | Sprint 7 (Job Search & Application Tracker) |
+| Interview simulation | Sprint 9 | Sprint 9 (AI Interview Coach) |

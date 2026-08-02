@@ -10,8 +10,8 @@
 | 2 | Production Stabilization | 5 | Medium | ✅ Complete |
 | 3 | AI Resume Intelligence | 5 | Medium | ✅ Complete |
 | 4 | Advanced ATS Intelligence & Resume Quality Refinement | 5 | Medium | ✅ Complete |
-| 5 | AI Resume Optimizer & Rewrite Engine | 5 | Medium | ⬜ Not Started |
-| 6 | AI Career Coach | 8 | Hard | ⬜ Not Started |
+| 5 | AI Resume Optimizer & Rewrite Engine | 5 | Medium | ✅ Complete |
+| 6 | AI Career Coach | 8 | Hard | ✅ Complete |
 | 7 | Job Search & Application Tracker | 7 | Medium-Hard | ⬜ Not Started |
 | 8 | CrewAI Multi-Agent System | 10 | Hard | ⬜ Not Started |
 | 9 | AI Interview Coach | 7 | Medium-Hard | ⬜ Not Started |
@@ -40,12 +40,16 @@
 ### Sprint 5 — AI Resume Optimizer & Rewrite Engine ✅ Complete
 **Actual Outcome:** Built central prompt architecture in `promptTemplates.ts` supporting 5 optimization modes (`ats`, `impact`, `concise`, `action-verbs`, `jd-align`) with strict `HALLUCINATION_GUARDRAIL`. Extended `api/ai-improve` route and `aiService.ts` with `mode` parameter and length limit enforcement. Added AI optimize buttons across all 5 resume forms (Achievements, Certifications, Personal Summary, Experience, Projects). Added Job Description context panel in `ResumeEditor.tsx` feeding target JD to all optimizer calls. Upgraded `AIImprovementModal` with editable output `<textarea>`, `↺ Regenerate` action, mode badges, JD Context badges, and persistent `activeItemId` state lifecycle. Created `tests/optimizerSafety.test.ts` (49 automated assertions + 4 manual truth-preservation cases passed 100%).
 
+### Sprint 6 — AI Career Coach ✅ Complete
+**Actual Outcome:** Built an authenticated conversational Career Coach (`/dashboard/career-coach`) with real-time SSE token streaming via Next.js serverless route (`/api/career-coach`). Grounded the Coach across 3 intelligence layers: candidate resume (`buildResumeContextBlock`), deterministic ATS analysis (`buildATSContextBlock` from `analyzeResume`), and target job description context (`buildJDContextBlock`). Enforced non-negotiable truth-preservation guardrails (`CAREER_COACH_SYSTEM_PROMPT`). Created pure helper module `lib/careerCoachService.ts`, client UI shell with starter prompts, context status indicator bar, context inspector panel, input clamping, auto-resizing textarea, 8-turn context window trimming warning, and comprehensive safety test suite `tests/careerCoachSafety.test.ts` (34 automated assertions + 5 manual QA cases passed 100%).
+
 ---
 
 ## Active Sprint
 
-### Sprint 6 — AI Career Coach ⬜ 0% Progress
-**Goal:** Build an AI conversational assistant as a secondary interface within HireLens.
+### Sprint 7 — Job Search & Application Tracker ⬜ 0% Progress
+**Goal:** Job search integration and an application pipeline tracker.
+
 
 ---
 
@@ -84,3 +88,15 @@ Vercel production deployment, custom domain, CI/CD pipeline (GitHub Actions), en
 - Add a real "Actual Outcome" paragraph when a sprint completes — do not invent details, only write what was actually verified
 - Never expand future sprint descriptions here — detail lives in `Sprint_NN/Day_NN.md`
 - If a sprint's technical premises change (e.g., a framework decision), log the change in `20_Decision_Log.md` first, then update this file
+
+### Sprint 6 — AI Career Coach ⬜ Not Started
+**Goal:** Introduce a conversational AI Career Coach as an additional interface layer — grounded in the candidate's resume, HireLens ATS analysis, and optional JD context. The Coach explains existing intelligence rather than replacing it.
+**Architecture decision:** Stateless API (no Firestore persistence in Sprint 6), native ReadableStream streaming, Firebase auth reused, `google/gemini-2.5-flash` reused, no CrewAI.
+**Key deliverables:**
+- `lib/careerCoachService.ts` — pure context builders and type definitions
+- `app/api/career-coach/route.ts` — authenticated streaming endpoint
+- `app/dashboard/career-coach/page.tsx` — full chat UI with empty state, streaming messages, context inspector
+- `components/Sidebar.tsx` — "AI Career Coach" navigation entry added
+- `tests/careerCoachSafety.test.ts` — 37 automated assertions + 5 manual QA cases
+**Non-negotiable:** Coach never fabricates ATS scores, skills, experience, or qualifications. ATS scores remain deterministic engine output — the Coach explains them.
+**See:** `Sprint_06/Day_01.md` through `Day_08.md`
