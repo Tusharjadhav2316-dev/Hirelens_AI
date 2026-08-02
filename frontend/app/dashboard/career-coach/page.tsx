@@ -120,7 +120,7 @@ export default function CareerCoachPage() {
         return jobDescription.trim();
     }, [jobDescription]);
 
-    // File Upload Handler (PDF, TXT, MD, DOCX)
+    // File Upload Handler (PDF, TXT, MD, DOCX, etc.)
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -137,8 +137,9 @@ export default function CareerCoachPage() {
 
         try {
             let extractedText = "";
+            const fileName = file.name.toLowerCase();
 
-            if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+            if (fileName.endsWith(".pdf") || file.type === "application/pdf") {
                 const formData = new FormData();
                 formData.append("file", file);
 
@@ -149,19 +150,20 @@ export default function CareerCoachPage() {
                     body: formData
                 });
 
+                const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
-                    const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || "Failed to parse PDF file.");
+                    throw new Error(data.error || "Could not extract text from the selected PDF.");
                 }
-
-                const data = await res.json();
                 extractedText = data.text || "";
-            } else {
+            } else if (fileName.endsWith(".txt") || fileName.endsWith(".md") || fileName.endsWith(".json") || fileName.endsWith(".csv") || fileName.endsWith(".log") || file.type.startsWith("text/")) {
                 extractedText = await file.text();
+            } else {
+                const rawText = await file.text();
+                extractedText = rawText.replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim();
             }
 
-            if (!extractedText.trim()) {
-                throw new Error("Could not extract text from the selected file.");
+            if (!extractedText || extractedText.trim().length < 10) {
+                throw new Error("Could not extract text from the selected file. If this is a scanned PDF or binary file, please try uploading a text-based document or pasting the text directly.");
             }
 
             setAttachedDoc({
@@ -170,7 +172,7 @@ export default function CareerCoachPage() {
                 text: extractedText.trim()
             });
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to read attached file.";
+            const msg = err instanceof Error ? err.message : "Failed to parse file.";
             setError(msg);
         } finally {
             setIsParsingDoc(false);
@@ -480,9 +482,9 @@ export default function CareerCoachPage() {
             {/* Scrollable Messages / Empty State */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar min-h-0">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-2 sm:p-6 space-y-6 max-w-2xl mx-auto my-auto">
+                    <div className="flex flex-col items-center text-center py-4 sm:py-8 px-4 space-y-6 max-w-2xl mx-auto">
                         {/* Welcome Hero Illustration Badge */}
-                        <div className="relative mb-2 flex items-center justify-center">
+                        <div className="relative mb-1 flex items-center justify-center">
                             <div className="relative flex items-center justify-center">
                                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/25">
                                     <MessageSquare className="w-8 h-8" />
@@ -505,7 +507,7 @@ export default function CareerCoachPage() {
                         </div>
 
                         {/* Starter Questions Divider */}
-                        <div className="w-full relative my-4 flex items-center justify-center">
+                        <div className="w-full relative my-3 flex items-center justify-center">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-slate-200/80 dark:border-slate-800" />
                             </div>
@@ -628,32 +630,34 @@ export default function CareerCoachPage() {
                         e.preventDefault();
                         handleSend();
                     }}
-                    className="flex gap-2 items-end"
+                    className="flex gap-2.5 items-end"
                 >
-                    {/* Upload Attachment Button */}
-                    <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        title="Upload resume or document (PDF, TXT, DOCX)"
-                        className="h-11 w-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all flex items-center justify-center flex-shrink-0"
-                    >
-                        <Paperclip className="w-5 h-5" />
-                    </button>
+                    {/* Relative Input Wrapper containing Paperclip icon inside on left */}
+                    <div className="relative flex-1 flex items-center">
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            title="Attach document (PDF, TXT, MD)"
+                            className="absolute left-3 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 z-10"
+                        >
+                            <Paperclip className="w-5 h-5" />
+                        </button>
 
-                    <textarea
-                        ref={textareaRef}
-                        style={{ minHeight: "44px" }}
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value.slice(0, MAX_INPUT_LENGTH))}
-                        onKeyDown={handleKeyDown}
-                        placeholder={attachedDoc ? `Ask a question about ${attachedDoc.name}...` : "Ask HireLens Career Coach a question..."}
-                        className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:bg-white dark:focus:bg-slate-800 transition-all custom-scrollbar overflow-y-auto"
-                    />
+                        <textarea
+                            ref={textareaRef}
+                            style={{ minHeight: "48px" }}
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value.slice(0, MAX_INPUT_LENGTH))}
+                            onKeyDown={handleKeyDown}
+                            placeholder={attachedDoc ? `Ask a question about ${attachedDoc.name}...` : "Ask HireLens Career Coach a question..."}
+                            className="w-full resize-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-11 pr-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:bg-white dark:focus:bg-slate-800 transition-all custom-scrollbar overflow-y-auto"
+                        />
+                    </div>
 
                     <button
                         type="submit"
                         disabled={!inputValue.trim() || isStreaming}
-                        className="h-11 px-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 flex-shrink-0"
+                        className="h-12 px-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 flex-shrink-0"
                     >
                         <Send className="w-4 h-4" />
                         <span className="hidden sm:inline">Send</span>
