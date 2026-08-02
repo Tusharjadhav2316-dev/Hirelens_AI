@@ -4,17 +4,37 @@ import Link from "next/link";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useResume } from "@/contexts/ResumeContext";
-import { MessageSquare, Send, RefreshCw, Sparkles, User, Bot, AlertCircle, Target, ChevronDown, ChevronUp, X, Info } from "lucide-react";
+import {
+    MessageSquare,
+    Send,
+    RefreshCw,
+    Sparkles,
+    User,
+    Bot,
+    AlertCircle,
+    Target,
+    ChevronDown,
+    ChevronUp,
+    X,
+    Info,
+    TrendingUp,
+    FileText,
+    Code,
+    Folder,
+    Star,
+    ChevronRight,
+    Briefcase
+} from "lucide-react";
 import { analyzeResume } from "@/lib/atsAnalyzer";
 import { ChatMessage, trimConversationHistory, buildResumeContextBlock, hasResumeContent, buildATSContextBlock, ATSContextInput } from "@/lib/careerCoachService";
 
-const STARTER_PROMPTS = [
-    "How can I improve my ATS score?",
-    "What are the weakest parts of my resume?",
-    "How can I improve my Java Developer resume?",
-    "Review my projects.",
-    "How can I tailor my resume for a job?",
-    "What skills should I highlight?"
+const STARTER_QUESTIONS = [
+    { icon: TrendingUp, text: "How can I improve my ATS score?" },
+    { icon: FileText, text: "What are the weakest parts of my resume?" },
+    { icon: Code, text: "How can I improve my Java Developer resume?" },
+    { icon: Folder, text: "Review my projects." },
+    { icon: Target, text: "How can I tailor my resume for a job?" },
+    { icon: Star, text: "What skills should I highlight?" }
 ];
 
 const MAX_INPUT_LENGTH = 3800;
@@ -51,36 +71,33 @@ export default function CareerCoachPage() {
     const [jdPanelOpen, setJdPanelOpen] = useState<boolean>(false);
     const [inspectorOpen, setInspectorOpen] = useState<boolean>(false);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const turnCount = Math.floor(messages.length / 2);
 
-    // Single normalized Job Description string for validation, UI checks, and API payload
-    const cleanedJobDescription = useMemo(() => jobDescription.trim(), [jobDescription]);
-
-    // Memoize resume context block so it is only rebuilt when resume state changes
+    // Memoize resume context block so it only rebuilds when resume changes
     const resumeContextString = useMemo(() => {
         return hasResumeContent(resume) ? buildResumeContextBlock(resume) : undefined;
     }, [resume]);
 
-    // Compute deterministic ATS analysis result recomputing only when resume changes
+    // Memoize ATS Analysis computation
     const atsResult = useMemo(() => {
         return hasResumeContent(resume) ? analyzeResume(resume, false) : null;
     }, [resume]);
 
-    // Memoize ATS context block rebuilding only when ATS result changes
+    // Memoize ATS context block string
     const atsContextString = useMemo(() => {
         return atsResult ? buildATSContextBlock(atsResult as ATSContextInput) : undefined;
     }, [atsResult]);
 
-    // Auto-scroll to bottom after DOM updates whenever messages or streaming state changes
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, isStreaming]);
+    // Trimmed active JD context string
+    const cleanedJobDescription = useMemo(() => {
+        return jobDescription.trim();
+    }, [jobDescription]);
 
-    // Auto-resize textarea to fit content (max 128px)
+    // Auto-resize textarea logic up to 128px
     useEffect(() => {
         const textarea = textareaRef.current;
         if (textarea) {
@@ -89,33 +106,35 @@ export default function CareerCoachPage() {
         }
     }, [inputValue]);
 
-    // Abort in-flight requests on component unmount
+    // Auto-scroll logic after DOM updates
     useEffect(() => {
-        return () => {
-            abortControllerRef.current?.abort();
-        };
-    }, []);
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, isStreaming]);
 
     const handleReset = () => {
-        abortControllerRef.current?.abort();
-        abortControllerRef.current = null;
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
         setMessages([]);
         setInputValue("");
-        setError(null);
         setIsStreaming(false);
+        setError(null);
     };
 
-    const handleSend = async (text?: string) => {
-        const content = (text ?? inputValue).trim();
-        if (!content || isStreaming) return;
+    const handleSend = async (textToSend?: string) => {
+        const messageContent = (textToSend || inputValue).trim();
+        if (!messageContent || isStreaming) return;
 
-        setInputValue("");
         setError(null);
+        if (!textToSend) {
+            setInputValue("");
+        }
 
         const userMessage: ChatMessage = {
             id: generateId(),
             role: "user",
-            content
+            content: messageContent
         };
 
         const assistantMessage: ChatMessage = {
@@ -124,48 +143,48 @@ export default function CareerCoachPage() {
             content: ""
         };
 
-        let updatedMessages: ChatMessage[] = [];
+        let currentHistory: ChatMessage[] = [];
         setMessages(prev => {
-            updatedMessages = [...prev, userMessage];
-            return [...updatedMessages, assistantMessage];
+            const next = [...prev, userMessage, assistantMessage];
+            currentHistory = next;
+            return next;
         });
-        setIsStreaming(true);
+
+        const activeHistory = currentHistory.slice(0, -1);
+        const trimmedHistory = trimConversationHistory(activeHistory, 8);
 
         const controller = new AbortController();
         abortControllerRef.current = controller;
+        setIsStreaming(true);
 
         try {
-            const token = await user?.getIdToken();
-            if (!token) throw new Error("You must be signed in to use Career Coach.");
+            const idToken = await user?.getIdToken();
 
-            const trimmedHistory = trimConversationHistory(updatedMessages, 8);
-
-            const response = await fetch("/api/career-coach", {
+            const res = await fetch("/api/career-coach", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    ...(idToken ? { Authorization: `Bearer ${idToken}` } : {})
                 },
                 body: JSON.stringify({
                     messages: trimmedHistory,
-                    ...(resumeContextString ? { resumeContext: resumeContextString } : {}),
-                    ...(atsContextString ? { atsContext: atsContextString } : {}),
-                    ...(cleanedJobDescription.length >= 20 ? { jobDescription: cleanedJobDescription } : {})
+                    resumeContext: resumeContextString,
+                    atsContext: atsContextString,
+                    jobDescription: cleanedJobDescription.length >= 20 ? cleanedJobDescription : undefined
                 }),
-                signal: controller.signal,
+                signal: controller.signal
             });
 
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                if (response.status === 429) {
-                    throw new Error("Rate limit reached. Please wait a moment and try again.");
-                }
-                throw new Error(errData?.error ?? `Request failed (${response.status})`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${res.status}`);
             }
 
-            if (!response.body) throw new Error("No response stream received.");
+            if (!res.body) {
+                throw new Error("No response body received from stream.");
+            }
 
-            const reader = response.body.getReader();
+            const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let accumulated = "";
 
@@ -207,21 +226,23 @@ export default function CareerCoachPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto px-3 sm:px-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="flex flex-col min-h-[calc(100vh-8rem)] max-w-4xl mx-auto px-3 sm:px-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5" />
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex items-center gap-3.5">
+                    {/* Header Icon Badge */}
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+                        <MessageSquare className="w-6 h-6" />
+                        <Sparkles className="w-3.5 h-3.5 absolute top-1 right-1 text-blue-200" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             HireLens Career Coach
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
                                 Beta
                             </span>
                         </h1>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                             Powered by your resume & HireLens ATS intelligence
                         </p>
                     </div>
@@ -230,7 +251,7 @@ export default function CareerCoachPage() {
                 {messages.length > 0 && (
                     <button
                         onClick={handleReset}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs"
                     >
                         <RefreshCw className="w-3.5 h-3.5" />
                         New conversation
@@ -239,17 +260,17 @@ export default function CareerCoachPage() {
             </div>
 
             {/* Context Status Bar */}
-            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs text-gray-600 dark:text-gray-400 flex items-center justify-between">
+            <div className="px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden">
                     {hasResumeContent(resume) ? (
                         <>
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
                             <span className="font-semibold text-emerald-700 dark:text-emerald-400">Resume context active</span>
-                            <span className="text-gray-400 dark:text-gray-500">•</span>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
                             <span className="truncate max-w-xs">{resume.personalInfo.fullName || resume.title || "Resume Profile"}</span>
                             {atsResult && (
                                 <>
-                                    <span className="text-gray-400 dark:text-gray-500">•</span>
+                                    <span className="text-slate-300 dark:text-slate-600">•</span>
                                     <span className="font-semibold text-blue-600 dark:text-blue-400">
                                         ATS Score: {Math.round(atsResult.overallScore)}/100 (HireLens ATS Engine)
                                     </span>
@@ -260,7 +281,7 @@ export default function CareerCoachPage() {
                         <>
                             <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
                             <span className="font-semibold text-amber-700 dark:text-amber-400">No resume loaded</span>
-                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                            <span className="text-slate-300 dark:text-slate-600">—</span>
                             <Link href="/dashboard/builder" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
                                 Add resume details
                             </Link>
@@ -272,41 +293,41 @@ export default function CareerCoachPage() {
                 <button
                     type="button"
                     onClick={() => setInspectorOpen(!inspectorOpen)}
-                    className="flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-0.5 rounded-md hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors flex-shrink-0"
+                    className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex-shrink-0 bg-white dark:bg-slate-800 shadow-2xs"
                 >
-                    <Info className="w-3.5 h-3.5" />
+                    <Info className="w-3.5 h-3.5 text-slate-400" />
                     <span>Context</span>
                 </button>
             </div>
 
             {/* Context Inspector Panel */}
             {inspectorOpen && (
-                <div className="p-3 bg-slate-100/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs space-y-1.5 text-gray-700 dark:text-gray-300">
-                    <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <div className="p-3.5 bg-slate-100/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs space-y-2 text-slate-700 dark:text-slate-300">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <Info className="w-3.5 h-3.5 text-blue-500" />
                         Active Context Inspector
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                         <div>• Resume Context: <span className="font-medium">{hasResumeContent(resume) ? "Active" : "None"}</span></div>
                         <div>• ATS Intelligence: <span className="font-medium">{atsResult ? `${Math.round(atsResult.overallScore)}/100 (HireLens ATS Engine)` : "None"}</span></div>
                         <div>• Job Description: <span className="font-medium">{cleanedJobDescription.length >= 20 ? `Active (${cleanedJobDescription.length} chars)` : "None"}</span></div>
                         <div>• Conversation History: <span className="font-medium">{turnCount} / 8 context turns ({messages.length} messages)</span></div>
                     </div>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 italic border-t border-slate-200/60 dark:border-slate-700/60 pt-1">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 italic border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5">
                         Note: ATS scores are computed by the deterministic HireLens ATS Engine, not generated or recalculated by AI.
                     </p>
                 </div>
             )}
 
             {/* Optional Job Description Panel */}
-            <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
+            <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20">
                 <button
                     type="button"
                     onClick={() => setJdPanelOpen(!jdPanelOpen)}
-                    className="w-full px-4 py-2 flex items-center justify-between text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 transition-colors"
+                    className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 transition-colors"
                 >
-                    <div className="flex items-center gap-2">
-                        <Target className="w-3.5 h-3.5 text-blue-500" />
+                    <div className="flex items-center gap-2.5">
+                        <Briefcase className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span>
                             {cleanedJobDescription.length >= 20 ? (
                                 <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-1">
@@ -317,12 +338,12 @@ export default function CareerCoachPage() {
                             )}
                         </span>
                     </div>
-                    {jdPanelOpen ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                    {jdPanelOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                 </button>
 
                 {jdPanelOpen && (
                     <div className="p-4 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 space-y-2 bg-white dark:bg-slate-900">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                             Paste a job description to get role-specific advice. The Coach will only reference skills already in your resume.
                         </p>
                         <textarea
@@ -330,9 +351,9 @@ export default function CareerCoachPage() {
                             value={jobDescription}
                             onChange={(e) => setJobDescription(e.target.value.slice(0, 5000))}
                             placeholder="Paste Target Job Description here..."
-                            className="w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 transition-all custom-scrollbar max-h-48"
+                            className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 transition-all custom-scrollbar max-h-48"
                         />
-                        <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
                             <span>{jobDescription.length}/5000 characters</span>
                             {jobDescription.length > 0 && (
                                 <button
@@ -340,7 +361,7 @@ export default function CareerCoachPage() {
                                     onClick={() => setJobDescription("")}
                                     className="text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
                                 >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-3.5 h-3.5" />
                                     Clear
                                 </button>
                             )}
@@ -351,7 +372,7 @@ export default function CareerCoachPage() {
 
             {/* Conversation Length Warning Banner (>= 6 turns) */}
             {turnCount >= 6 && (
-                <div className="mx-4 mt-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+                <div className="mx-4 mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
                     <span>
                         Earlier messages may fall outside the coaching context window.{" "}
                         <button
@@ -367,39 +388,62 @@ export default function CareerCoachPage() {
             )}
 
             {/* Scrollable Messages / Empty State */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar min-h-0">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6 max-w-2xl mx-auto">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/60 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                            <Sparkles className="w-8 h-8" />
+                    <div className="h-full flex flex-col items-center justify-center text-center p-2 sm:p-6 space-y-6 max-w-2xl mx-auto my-auto">
+                        {/* Welcome Hero Illustration Badge */}
+                        <div className="relative mb-2 flex items-center justify-center">
+                            <div className="relative flex items-center justify-center">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/25">
+                                    <MessageSquare className="w-8 h-8" />
+                                </div>
+                                <div className="absolute -bottom-1 -right-2 w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900">
+                                    <Sparkles className="w-4 h-4 text-blue-200" />
+                                </div>
+                                <Sparkles className="absolute -top-2 -left-3 w-5 h-5 text-indigo-400 animate-pulse" />
+                                <Sparkles className="absolute -bottom-2 -left-2 w-4 h-4 text-blue-400" />
+                            </div>
                         </div>
 
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
                                 Welcome to HireLens Career Coach
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mx-auto">
                                 Ask questions about your resume strategy, ATS scores, role compatibility, or career growth. The Coach interprets your candidate data to provide targeted, actionable guidance.
                             </p>
                         </div>
 
-                        {/* Starter Prompts */}
-                        <div className="w-full space-y-3 text-left">
-                            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-center">
-                                Suggested Starter Questions
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                                {STARTER_PROMPTS.map((prompt, idx) => (
+                        {/* Starter Questions Divider */}
+                        <div className="w-full relative my-4 flex items-center justify-center">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-slate-200/80 dark:border-slate-800" />
+                            </div>
+                            <div className="relative px-3 bg-white dark:bg-slate-900 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                                Suggested starter questions
+                            </div>
+                        </div>
+
+                        {/* Starter Questions Grid (2 columns, 3 rows matching design reference) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                            {STARTER_QUESTIONS.map((q, idx) => {
+                                const IconComponent = q.icon;
+                                return (
                                     <button
                                         key={idx}
-                                        onClick={() => handleSend(prompt)}
-                                        className="p-3 text-xs font-medium text-gray-700 dark:text-gray-300 bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-300 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-800 rounded-xl transition-all duration-200 text-left flex items-start gap-2 group shadow-2xs"
+                                        onClick={() => handleSend(q.text)}
+                                        className="p-3.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-300 dark:hover:border-blue-700/80 rounded-2xl transition-all duration-200 text-left flex items-center justify-between group shadow-2xs hover:shadow-md hover:shadow-blue-500/5"
                                     >
-                                        <Sparkles className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                                        <span>{prompt}</span>
+                                        <div className="flex items-center gap-3 pr-2 min-w-0">
+                                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 transition-colors">
+                                                <IconComponent className="w-4 h-4" />
+                                            </div>
+                                            <span className="truncate">{q.text}</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                                     </button>
-                                ))}
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
                 ) : (
@@ -427,7 +471,7 @@ export default function CareerCoachPage() {
                                         className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                                             isUser
                                                 ? "bg-blue-600 text-white rounded-tr-none shadow-xs"
-                                                : "bg-slate-100 dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-tl-none border border-slate-200/60 dark:border-slate-700/60 shadow-2xs whitespace-pre-wrap"
+                                                : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none border border-slate-200/60 dark:border-slate-700/60 shadow-2xs whitespace-pre-wrap"
                                         }`}
                                     >
                                         {msg.content}
@@ -457,7 +501,7 @@ export default function CareerCoachPage() {
 
             {/* Error Banner */}
             {error && (
-                <div className="mx-4 mb-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <div className="mx-4 mb-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
                     <span>{error}</span>
                 </div>
@@ -470,7 +514,7 @@ export default function CareerCoachPage() {
                         e.preventDefault();
                         handleSend();
                     }}
-                    className="flex gap-2 items-end"
+                    className="flex gap-2.5 items-end"
                 >
                     <textarea
                         ref={textareaRef}
@@ -479,25 +523,25 @@ export default function CareerCoachPage() {
                         onChange={(e) => setInputValue(e.target.value.slice(0, MAX_INPUT_LENGTH))}
                         onKeyDown={handleKeyDown}
                         placeholder="Ask HireLens Career Coach a question..."
-                        className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:bg-white dark:focus:bg-slate-800 transition-all custom-scrollbar overflow-y-auto"
+                        className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:bg-white dark:focus:bg-slate-800 transition-all custom-scrollbar overflow-y-auto"
                     />
 
                     <button
                         type="submit"
                         disabled={!inputValue.trim() || isStreaming}
-                        className="h-11 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-colors flex items-center justify-center gap-2 shadow-xs flex-shrink-0"
+                        className="h-11 px-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 flex-shrink-0"
                     >
                         <Send className="w-4 h-4" />
                         <span className="hidden sm:inline">Send</span>
                     </button>
                 </form>
 
-                <p className="mt-2 text-[11px] text-center text-gray-400 dark:text-gray-500">
+                <p className="mt-2 text.5-[11px] text-center text-slate-400 dark:text-slate-500">
                     The Coach uses your HireLens resume and ATS analysis as context. Responses are AI-generated coaching, not verified recruiter assessments.
                 </p>
 
                 {inputValue.length > 2000 && (
-                    <p className={`mt-1 text-[10px] text-center font-medium ${inputValue.length > 3500 ? "text-red-500 font-semibold" : "text-gray-400 dark:text-gray-500"}`}>
+                    <p className={`mt-1 text-[10px] text-center font-medium ${inputValue.length > 3500 ? "text-red-500 font-semibold" : "text-slate-400 dark:text-slate-500"}`}>
                         {inputValue.length} / {MAX_INPUT_LENGTH} characters
                     </p>
                 )}
