@@ -561,25 +561,19 @@ export default function CareerCoachPage() {
                                                 : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none border border-slate-200/60 dark:border-slate-700/60 shadow-2xs whitespace-pre-wrap"
                                         }`}
                                     >
-                                        {msg.content}
+                                        {msg.content ? (
+                                            msg.content
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 py-1">
+                                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
                         })}
-
-                        {/* Streaming / Thinking Indicator */}
-                        {isStreaming && (
-                            <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0 text-white shadow-xs">
-                                    <Bot className="w-4 h-4" />
-                                </div>
-                                <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none px-4 py-3 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "0ms" }} />
-                                    <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "150ms" }} />
-                                    <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: "300ms" }} />
-                                </div>
-                            </div>
-                        )}
 
                         <div ref={messagesEndRef} />
                     </div>
