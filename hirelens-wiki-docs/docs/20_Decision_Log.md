@@ -179,3 +179,11 @@
 **Reason:** The Coach is the most distinctive, highest-value differentiator of HireLens 2.0 vs. competing tools. Positioning it prominently signals to users that this is a primary feature, not a hidden utility.
 **Alternatives Considered:** Place it after Resume Analyzer (more logical tool grouping but de-emphasizes the Coach's importance); Place it first above Dashboard (too aggressive — Dashboard is the natural entry point).
 **Status:** Accepted
+
+### [Sprint 6, Post-Day 8 UX Hardening] Document Attachment Upload & Inline Stream Avatar Consolidation
+**Decision:** 
+1. Add an attachment button (`<Paperclip />`) to the Career Coach chat input supporting `.pdf`, `.txt`, `.md`, `.doc`, `.docx`. PDF files parse via `POST /api/parse-pdf` while text files read directly client-side. The extracted document text is injected into `resumeContext` payload sent to `/api/career-coach`.
+2. Consolidate assistant streaming state directly inside `messages.map()` so the 3 bouncing dots render inside the active assistant message bubble, eliminating the separate `{isStreaming && ...}` block and ensuring **exactly one** robot avatar appears per turn.
+**Reason:** Allows users to ask career questions about arbitrary uploaded resumes/cover letters without needing a pre-existing builder profile, while fixing UI duplicate avatar artifacts during token streaming.
+**Alternatives Considered:** Persist uploaded documents to Firebase Storage (deferred — session-scoped context is lighter and sufficient for chat grounding); Multiple robot avatars during generation (rejected — confusing UI visual artifact).
+**Status:** Accepted

@@ -89,14 +89,15 @@ Vercel production deployment, custom domain, CI/CD pipeline (GitHub Actions), en
 - Never expand future sprint descriptions here — detail lives in `Sprint_NN/Day_NN.md`
 - If a sprint's technical premises change (e.g., a framework decision), log the change in `20_Decision_Log.md` first, then update this file
 
-### Sprint 6 — AI Career Coach ⬜ Not Started
+### Sprint 6 — AI Career Coach ✅ Complete
 **Goal:** Introduce a conversational AI Career Coach as an additional interface layer — grounded in the candidate's resume, HireLens ATS analysis, and optional JD context. The Coach explains existing intelligence rather than replacing it.
-**Architecture decision:** Stateless API (no Firestore persistence in Sprint 6), native ReadableStream streaming, Firebase auth reused, `google/gemini-2.5-flash` reused, no CrewAI.
+**Architecture decision:** Stateless API (client-side React state conversation window), native ReadableStream streaming, Firebase auth verified, `google/gemini-2.5-flash` model, deterministic ATS engine explanation, client-side PDF/TXT document attachment upload capability.
 **Key deliverables:**
 - `lib/careerCoachService.ts` — pure context builders and type definitions
 - `app/api/career-coach/route.ts` — authenticated streaming endpoint
-- `app/dashboard/career-coach/page.tsx` — full chat UI with empty state, streaming messages, context inspector
+- `app/api/parse-pdf/route.ts` — PDF parsing endpoint returning extracted text
+- `app/dashboard/career-coach/page.tsx` — full chat UI with document attachment upload, single robot avatar streaming, starter prompts, context inspector
 - `components/Sidebar.tsx` — "AI Career Coach" navigation entry added
-- `tests/careerCoachSafety.test.ts` — 37 automated assertions + 5 manual QA cases
+- `tests/careerCoachSafety.test.ts` — 34 automated assertions + 5 manual QA cases passed 100%
 **Non-negotiable:** Coach never fabricates ATS scores, skills, experience, or qualifications. ATS scores remain deterministic engine output — the Coach explains them.
 **See:** `Sprint_06/Day_01.md` through `Day_08.md`
