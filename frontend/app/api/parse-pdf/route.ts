@@ -4,7 +4,7 @@ const pdfParse = require('pdf-parse');
 
 export async function POST(req: Request) {
     try {
-        const decodedUser = await verifyAuth(req);
+        await verifyAuth(req);
     } catch (authError) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -20,7 +20,8 @@ export async function POST(req: Request) {
             );
         }
 
-        if (file.type !== 'application/pdf') {
+        const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+        if (!isPdf) {
             return NextResponse.json(
                 { error: 'Invalid file type. Only PDF files are allowed.' },
                 { status: 400 }
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({
-            extractedText: data.text
+            extractedText: data.text,
+            text: data.text
         });
 
     } catch (error) {

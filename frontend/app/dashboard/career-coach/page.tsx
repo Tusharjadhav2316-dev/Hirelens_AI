@@ -61,7 +61,7 @@ function mapErrorToUserMessage(err: unknown): string {
     if (raw.includes("4000") || raw.includes("too long") || raw.includes("character")) {
         return "Your message is too long. Please shorten it and try again.";
     }
-    return "Something went wrong. Please try again.";
+    return err instanceof Error ? err.message : "Something went wrong. Please try again.";
 }
 
 const generateId = () => Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 9);
@@ -154,7 +154,7 @@ export default function CareerCoachPage() {
                 if (!res.ok) {
                     throw new Error(data.error || "Could not extract text from the selected PDF.");
                 }
-                extractedText = data.text || "";
+                extractedText = data.extractedText || data.text || "";
             } else if (fileName.endsWith(".txt") || fileName.endsWith(".md") || fileName.endsWith(".json") || fileName.endsWith(".csv") || fileName.endsWith(".log") || file.type.startsWith("text/")) {
                 extractedText = await file.text();
             } else {
