@@ -226,15 +226,10 @@ export default function CareerCoachPage() {
             content: ""
         };
 
-        let currentHistory: ChatMessage[] = [];
-        setMessages(prev => {
-            const next = [...prev, userMessage, assistantMessage];
-            currentHistory = next;
-            return next;
-        });
+        const nextMessages = [...messages, userMessage];
+        setMessages([...nextMessages, assistantMessage]);
 
-        const activeHistory = currentHistory.slice(0, -1);
-        const trimmedHistory = trimConversationHistory(activeHistory, 8);
+        const trimmedHistory = trimConversationHistory(nextMessages, 8);
 
         const controller = new AbortController();
         abortControllerRef.current = controller;
