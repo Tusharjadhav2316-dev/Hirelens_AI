@@ -1,0 +1,12 @@
+# Python / Agent Service Git Ignore
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.local
+!.env.example
+*.log

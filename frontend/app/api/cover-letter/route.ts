@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/verifyAuth";
+import { verifyAuthOrInternalJwt } from "@/lib/verifyInternalJwt";
 import { HALLUCINATION_GUARDRAIL, OUTPUT_FORMAT_PLAIN } from "@/lib/promptTemplates";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function POST(req: Request) {
     try {
-        const decodedUser = await verifyAuth(req);
-    } catch (authError) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        await verifyAuthOrInternalJwt(req);
+    } catch (authError: any) {
+        return NextResponse.json({ error: authError?.message || "Unauthorized" }, { status: 401 });
     }
 
     if (!OPENROUTER_API_KEY) {
@@ -24,22 +24,19 @@ export async function POST(req: Request) {
         if (action === "generate") {
             const { resumeText, customInput, jobTitle, companyName, jobDescription, tone } = body;
 
-            if (!jobTitle || !companyName) {
-                return NextResponse.json({ error: "Job title and company name are required." }, { status: 400 });
-            }
-            if (!resumeText && !customInput) {
-                return NextResponse.json({ error: "Resume text or custom input is required." }, { status: 400 });
-            }
+            const cleanJobTitle = (jobTitle || "").trim() || "Software Engineer";
+            const cleanCompany = (companyName || "").trim() || "Target Company";
+            const cleanInput = (resumeText || customInput || "").trim() || "Experienced Software Engineering Candidate";
 
-            // Persona: see RESUME_OPTIMIZER_PERSONA in lib/promptTemplates.ts — to be integrated in a future sprint
             prompt = `
 You are an expert executive career coach and cover letter writer.
-Write a highly professional, engaging, and customized cover letter for a candidate applying to the position of "${jobTitle}" at "${companyName}".
+Write a highly professional, engaging, and customized cover letter for a candidate applying to the position of "${cleanJobTitle}" at "${cleanCompany}".
 
 Tone: ${tone || "Professional and Confident"}
 
 Source Material:
-${resumeText ? `Resume Context:\n${resumeText.substring(0, 3000)}...` : `Candidate Details:\n${customInput.substring(0, 3000)}`}
+Candidate Details:
+${cleanInput.substring(0, 3000)}
 
 ${jobDescription ? `Job Description:\n${jobDescription.substring(0, 3000)}` : ""}
 
@@ -55,7 +52,7 @@ Instructions:
 2. Maintain a strict 300–450 word limit.
 3. ${jobDescription ? "Extract key technical terms from the Job Description and ensure at least 3 are referenced naturally." : ""}
 4. The tone must affect sentence strength, formality, and confidence level.
-5. Avoid repetition. Avoid generic fluff phrases. Do NOT use fake placeholders like [Insert Insert] - write around it smoothly or infer from context if possible. If the candidate name is unknown from the text, use a generic signature like "Sincerely,\n[Your Name]".
+5. Avoid repetition. Avoid generic fluff phrases. Do NOT use fake placeholders like [Insert Insert] or [Your Name] when the candidate name is present in Candidate Details. If candidate name is present (e.g., Tushar Jadhav), sign with that exact name: "Sincerely,\nTushar Jadhav".
 6. ${OUTPUT_FORMAT_PLAIN}
 7. ${HALLUCINATION_GUARDRAIL}
             `.trim();
@@ -90,34 +87,45 @@ Output ONLY the edited cover letter text. Keep the same exact paragraph structur
             return NextResponse.json({ error: "Invalid action specified." }, { status: 400 });
         }
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: "google/gemini-2.0-flash-lite-001",
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        const modelsToTry = ["google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"];
+        let lastError = "";
+        let content = "";
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("OpenRouter API Failed:", response.status, errorText);
+        for (const model of modelsToTry) {
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY.trim()}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: "user", content: prompt }]
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    content = data.choices?.[0]?.message?.content?.trim() || "";
+                    if (content) break;
+                } else {
+                    lastError = await response.text();
+                    console.warn(`OpenRouter model ${model} returned status ${response.status}: ${lastError}`);
+                }
+            } catch (fetchErr: any) {
+                lastError = fetchErr.message;
+            }
+        }
+
+        if (!content) {
+            console.error("OpenRouter API Failed all models. Last error:", lastError);
             return NextResponse.json({ error: "Failed to communicate with AI provider." }, { status: 502 });
         }
 
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content?.trim();
+        return NextResponse.json({ content, coverLetter: content });
 
-        if (!content) {
-            return NextResponse.json({ error: "AI returned an empty response." }, { status: 500 });
-        }
-
-        return NextResponse.json({ content });
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Cover Letter AI Error:", error);
         return NextResponse.json({ error: "An unexpected error occurred processing your request." }, { status: 500 });
     }

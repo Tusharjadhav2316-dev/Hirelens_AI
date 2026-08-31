@@ -12,6 +12,7 @@ import {
     History,
     Settings,
     MessageSquare,
+    Sparkles,
     X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ interface SidebarProps {
 }
 
 const navigationItems = [
+    { name: "AI Career Agent", href: "/dashboard/agent", icon: Sparkles, isPrimary: true },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "AI Career Coach", href: "/dashboard/career-coach", icon: MessageSquare },
     { name: "Resume Builder", href: "/dashboard/builder", icon: FileEdit },
@@ -72,7 +74,7 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
                     isExpanded ? "justify-between px-4" : "justify-center px-4 lg:px-0"
                 )}>
                     <Link
-                        href="/dashboard"
+                        href="/dashboard/agent"
                         className={cn(
                             "flex items-center gap-3 transition-opacity hover:opacity-90 overflow-hidden",
                             !isExpanded && "lg:justify-center lg:w-full"
@@ -119,6 +121,8 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
                     </div>
                     {navigationItems.map((item) => {
                         const isActive = pathname === item.href;
+                        const isPrimary = (item as any).isPrimary;
+
                         return (
                             <Link
                                 key={item.href}
@@ -128,16 +132,24 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
                                     "flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
                                     isExpanded ? "px-3" : "px-3 lg:px-0 lg:justify-center",
                                     isActive
-                                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-white"
+                                        ? isPrimary
+                                            ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/20 dark:bg-blue-600 dark:text-white"
+                                            : "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                                        : isPrimary
+                                            ? "bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-semibold border border-blue-200/60 dark:border-blue-800/40"
+                                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-white"
                                 )}
                             >
                                 <item.icon
                                     className={cn(
                                         "w-5 h-5 flex-shrink-0 transition-colors",
                                         isActive
-                                            ? "text-blue-600 dark:text-blue-400"
-                                            : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                                            ? isPrimary
+                                                ? "text-white"
+                                                : "text-blue-600 dark:text-blue-400"
+                                            : isPrimary
+                                                ? "text-blue-600 dark:text-blue-400"
+                                                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
                                     )}
                                 />
                                 <span

@@ -115,3 +115,40 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Cover letter prompt full centralization | Deferred since Sprint 3 | Remains deferred — low priority vs. Sprint 7+ features |
 | External job search integration | Sprint 7 | Sprint 7 (Job Search & Application Tracker) |
 | Interview simulation | Sprint 9 | Sprint 9 (AI Interview Coach) |
+
+## Sprint 8 Items — CrewAI Multi-Agent System & AI-First Agent Workspace
+
+| Feature | Priority | Status | Sprint/Day | Notes |
+|---|---|---|---|---|
+| `agent-service/` — new FastAPI + CrewAI Python microservice scaffold | High | Not Started | Sprint 8, Day 1 | First Python component in the repository |
+| Internal JWT minting/verification (`INTERNAL_AGENT_JWT_SECRET`) | High | Not Started | Sprint 8, Day 1 | Never trust a client-supplied `userId` |
+| `app/api/agent/chat/route.ts` — authenticated streaming proxy | High | Not Started | Sprint 8, Day 1 | Verifies Firebase token, forwards internal JWT |
+| `AgentResponse` / `AgentEvent` Pydantic + TypeScript schemas | High | Not Started | Sprint 8, Day 1 | Shared contract, kept in sync manually across languages |
+| Manager Agent + hierarchical Crew definition | High | Not Started | Sprint 8, Day 2 | `Process.hierarchical`, `max_iter` bounded |
+| Resume, ATS, Optimizer, Career, Job Search, Interview Coach agents | High | Not Started | Sprint 8, Day 2 | 7 core agents; see `02_Architecture.md` classification |
+| `/api/internal/ats-score` — wraps `atsEngine.ts`/`atsAnalyzer.ts` | High | Not Started | Sprint 8, Day 3 | Single source of truth preserved |
+| `/api/internal/jd-match` — wraps `jdMatcher.ts` | High | Not Started | Sprint 8, Day 3 | Powers `analyze_skill_gap` tool |
+| `optimize_resume_section`, `generate_cover_letter` tools | High | Not Started | Sprint 8, Day 3/4 | Call existing `/api/ai-improve`, `/api/cover-letter` unchanged |
+| `JobSearchTool` + `JobProviderAdapter` + `NullJobProvider` | High | Not Started | Sprint 8, Day 4 | No vendor committed yet — see `20_Decision_Log.md` |
+| `prepare_interview_questions` / `evaluate_interview_answer` tools | Medium | Not Started | Sprint 8, Day 4 | Text-based only, session-scoped |
+| Application workflow sequencing (Manager-orchestrated) | Medium | Not Started | Sprint 8, Day 5 | Not a dedicated agent — see Decision Log |
+| NDJSON streaming event protocol + Next.js passthrough | High | Not Started | Sprint 8, Day 6 | No new frontend dependency |
+| `app/dashboard/agent/page.tsx` — Agent Workspace shell | High | Not Started | Sprint 8, Day 7 | New default post-login route |
+| `components/agent/*` — Generative UI artifact renderers | High | Not Started | Sprint 8, Day 8 | Closed artifact-type union only |
+| Resume diff Apply/Reject flow wired to `ResumeContext` | High | Not Started | Sprint 8, Day 9 | Client-side mutation only, never server-driven |
+| `users/{uid}/agentUsage/{date}` rate-limit counter | Medium | Not Started | Sprint 8, Day 9 | The one new Firestore collection |
+| `agent-service/tests/` — tool authorization, schema, ATS-equality tests | High | Not Started | Sprint 8, Day 10 | Python side |
+| `tests/agentSafety.test.ts` / `tests/agentToolContracts.test.ts` | High | Not Started | Sprint 8, Day 10 | TypeScript side; existing 3 suites must still pass |
+
+## Deferred From Sprint 8 (Candidates for Future Sprints)
+
+| Feature | Reason Deferred | Target Sprint |
+|---|---|---|
+| Application pipeline tracker (Firestore-persisted kanban) | Additive UI/data-model work, not agent orchestration — explicitly out of Sprint 8's boundaries | Unscheduled (remainder of original Sprint 7 scope) |
+| Real `JobProviderAdapter` implementation (JSearch/Adzuna/etc.) | No API key provisioned; ships behind `NullJobProvider` until a vendor is selected | Follow-up Decision Log entry once provisioned |
+| Full personalized study-roadmap / learning-path generator | Sprint 8 ships only `analyze_skill_gap` as a tool, not the full roadmap generator | Sprint 10 (Career Roadmap & Learning Engine) |
+| Company Research Agent | No verified data source; requires a web-search/company-data tool not currently in scope | Unscheduled |
+| Application Planning Agent (dedicated) | Manager-orchestrated sequencing is sufficient for Sprint 8's needs | Revisit only if sequencing complexity grows |
+| Cross-service prompt centralization (shared config for TS + Python personas) | Tracked as accepted tech debt from the Career Agent persona port | Unscheduled — flagged in `20_Decision_Log.md` |
+| Audio/video interview recording | Original Sprint 9 scope explicitly limited to text input; Sprint 8 keeps that limitation | Unscheduled |
+| CrewAI Flows / multi-crew orchestration | Single hierarchical Crew is sufficient for one-turn-at-a-time orchestration | Revisit only if Application Workflow sequencing needs explicit control flow |

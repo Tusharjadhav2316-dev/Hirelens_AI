@@ -182,3 +182,55 @@
 **Impact:** Resume plaintext could appear in server logs.
 **Mitigation:** The API route only logs errors (`console.error`), not request bodies. No resume content is logged on success. For production (Sprint 14), server-side log scrubbing should be implemented.
 **Priority:** Low (pre-production; logged for Sprint 13/14)
+
+---
+
+## Sprint 8 Specific Risks
+
+### Cross-Service Authentication Bypass — Primary Risk
+**Description:** If the internal JWT is missing, weak, or mis-verified, a caller could invoke `agent-service` tools on behalf of any user, or the agent-service could be called directly by a hostile client bypassing Next.js auth entirely.
+**Impact:** Cross-user data access — a user's resume, ATS results, or agent actions exposed to or triggered by another party. This is the single worst-case outcome in the entire Sprint 8 architecture.
+**Mitigation:** `agent-service` rejects any request without a valid, unexpired internal JWT (60s TTL, HS256, shared secret never exposed to the client). Every tool receives `uid` exclusively from the verified JWT payload, never from the request body. Automated test (`agent-service/tests/test_internal_auth.py`) asserts a request with a missing/forged/expired JWT is rejected before any tool executes, and a request with a body-supplied `userId` that differs from the JWT's `uid` is ignored (JWT wins).
+**Priority:** Critical — verified in Day 10 before Sprint 8 is closed
+
+### Agent Recalculates or Contradicts the Deterministic ATS Score
+**Description:** An agent (most likely the ATS Agent or Manager) could reason its way into stating a different ATS number than `atsEngine.ts` actually produced, especially under an ambiguous or leading user prompt ("what do you think my real score is?").
+**Impact:** Directly violates the project's most important AI/deterministic boundary (established Sprint 3–4, reaffirmed Sprint 6) and would produce the same trust-undermining contradiction risk already documented for Sprint 6, now with an agent that can also *act* on the wrong number.
+**Mitigation:** `get_ats_analysis` is the only source of ATS numbers available to any agent; system prompts for the ATS Agent and Manager explicitly forbid stating a numeric score not returned by that tool in the current turn. Integration test asserts numeric equality between what `/api/internal/ats-score` returns and what appears in the resulting `ats_score_card` artifact for the same input.
+**Priority:** Critical — verified in Day 10
+
+### Unauthorized/Unbounded Tool Execution
+**Description:** An agent could be manipulated (via prompt injection in resume/JD content, or via ambiguous multi-step reasoning) into calling a tool outside its intended responsibility, or calling a legitimate tool repeatedly in a way that inflates cost without user benefit.
+**Impact:** Cost overrun, unexpected resume mutations proposed from unrelated conversations, degraded response latency.
+**Mitigation:** Hard-coded per-agent tool allowlists (not model-selectable), `max_iter` ceilings, wall-clock timeouts, and the daily Firestore request counter. Resume-mutating tool output is always a proposal requiring explicit user Apply, which caps the blast radius of any single bad tool call to "an ignorable suggestion," never an actual state change.
+**Priority:** High
+
+### Job Search Tool Returns Fabricated or Stale Listings
+**Description:** With no real job provider wired for initial Sprint 8 delivery (`NullJobProvider`), there is a risk an agent "fills the gap" by hallucinating plausible-looking job listings rather than clearly stating the capability isn't configured yet.
+**Impact:** Users could act on a fake job listing (apply to a nonexistent posting, misjudge market fit).
+**Mitigation:** `NullJobProvider` returns a structured, explicit "not configured" result type (not an empty list, which an agent might paper over) and the Job Search Agent's system prompt explicitly instructs it to relay that status truthfully rather than inventing listings. Tested via a dedicated assertion in `agentSafety.test.ts`.
+**Priority:** High (until a real provider ships)
+
+### Interview Coach Fabricates Candidate Qualifications in Generated Questions/Feedback
+**Description:** Interview question generation and answer feedback are the two Sprint 8 capabilities with the least deterministic grounding (no engine to check against, unlike ATS). The agent could imply the candidate has experience/skills not present in their resume when phrasing a question or feedback.
+**Impact:** Misleading self-assessment; candidate could misrepresent themselves in a real interview based on false confidence from HireLens feedback.
+**Mitigation:** Same `HALLUCINATION_GUARDRAIL` pattern applied to `prepare_interview_questions`/`evaluate_interview_answer` prompts; questions and feedback are explicitly grounded in the resume/JD context passed in, with the same non-fabrication instruction style already proven in the Career Coach. Manual QA cases added to `Sprint_08/Day_10.md`, modeled on the Sprint 6 C1–C5 cases.
+**Priority:** High
+
+### NDJSON Streaming Edge Cases (New Transport)
+**Description:** Unlike Sprint 6's raw-token stream, Sprint 8's stream carries discrete structured events — a line split across two TCP chunks, or a dropped connection mid-artifact, could leave the client with an unparseable partial JSON line or a stuck "in progress" UI state.
+**Impact:** Agent Workspace shows a permanently spinning activity step, or throws on `JSON.parse` of a truncated line.
+**Mitigation:** Client buffers by newline before parsing (same buffering discipline as the existing SSE token parser in `/api/career-coach`, adapted for line-delimited JSON instead of `data:`-prefixed tokens); a client-side idle timeout (parallel to the existing Career Coach reset pattern) surfaces a retry affordance if no event arrives for N seconds.
+**Priority:** Medium
+
+### Two Divergent Career-Advisory Personas (TypeScript vs. Python)
+**Description:** The Career Agent's system prompt is a manually-ported copy of `CAREER_COACH_SYSTEM_PROMPT`, not a shared import (Python cannot import a `.ts` file). The two could drift apart over time as one is edited without the other.
+**Impact:** Inconsistent tone/guardrail strength between the standalone Career Coach page and the Agent Workspace's Career Agent — a user could receive stricter truth-preservation language in one surface than the other.
+**Mitigation:** Logged explicitly as accepted tech debt in `20_Decision_Log.md` with a backlog item to centralize shared prompt text into a language-agnostic config in a future sprint. Until then, `Sprint_08/Day_02.md`'s checklist requires a manual side-by-side diff review of both prompts before merge.
+**Priority:** Medium (tracked, not blocking)
+
+### Rate-Limit Counter Race Condition
+**Description:** Concurrent requests from the same user (e.g., two browser tabs) could both read the daily counter before either writes, undercounting actual usage.
+**Impact:** A user could exceed the intended daily ceiling by a small margin under concurrent load.
+**Mitigation:** Firestore atomic increment (`FieldValue.increment(1)`) used instead of read-then-write, eliminating the race at the database level. Documented as a deliberate simplicity choice over a distributed lock, since the ceiling is a cost-control soft limit, not a hard security boundary.
+**Priority:** Low

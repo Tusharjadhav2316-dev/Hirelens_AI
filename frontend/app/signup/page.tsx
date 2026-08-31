@@ -59,7 +59,7 @@ export default function SignupPage() {
                 lastLogin: serverTimestamp(),
             });
 
-            router.push("/dashboard");
+            router.push("/dashboard/agent");
         } catch (error: unknown) {
             const err = error as any;
             console.error("Signup error:", err);

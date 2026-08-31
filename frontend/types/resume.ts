@@ -3,8 +3,9 @@ export interface PersonalInfo {
     email: string;
     phone: string;
     location: string;
-    portfolioUrl: string;
-    linkedinUrl: string;
+    portfolioUrl?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
     summary: string;
 }
 

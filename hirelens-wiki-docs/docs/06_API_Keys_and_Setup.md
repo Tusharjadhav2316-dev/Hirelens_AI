@@ -51,5 +51,20 @@ Sprint 1, Day 1 searches the codebase for SDK imports and API-key-shaped environ
 - **Alternatives:** None.
 - **How to test the key in isolation:** Run the typescript compiler build checks to verify imports, and check that a request returns `401 Unauthorized` without a valid token.
 
+### Internal Agent Service Auth (Sprint 8)
+- **Purpose:** Signs/verifies the short-lived internal JWT the Next.js proxy uses to authenticate itself to `agent-service` on behalf of a verified user — see `20_Decision_Log.md`.
+- **Pricing:** N/A (self-generated secret, not a third-party service).
+- **Free tier:** N/A.
+- **How to get a key:** Generate a random 256-bit secret (e.g. `openssl rand -hex 32`); set the same value in both the Next.js and `agent-service` environments.
+- **Env variable name:** `INTERNAL_AGENT_JWT_SECRET` (both services).
+- **Rate limits:** N/A.
+- **Security:** Never committed; never exposed to the client; rotate independently of Firebase/OpenRouter credentials if compromised.
+- **Alternatives:** mTLS between the two services (deferred — adds certificate management overhead not justified until the agent-service handles higher-sensitivity traffic than it does today).
+- **How to test the key in isolation:** Call `/api/agent/chat` without a valid Firebase token and confirm `401`; call `agent-service`'s `/chat` directly without the internal JWT header and confirm it rejects the request even with a well-formed body.
+
+### Job Search Provider (Sprint 8 — Not Yet Provisioned)
+- **Purpose:** Backs the `JobSearchTool`'s `JobProviderAdapter` for live job listings.
+- **Status:** **No key provisioned as of Sprint 8 planning.** `JobSearchTool` ships against a `NullJobProvider` that returns a clear "not configured" result rather than fabricated listings (see `20_Decision_Log.md`, "Job Search ships behind a provider abstraction"). This entry gets filled in with the full template above the day a real provider (e.g. JSearch/RapidAPI, Adzuna) is actually selected and a key is provisioned — not before, per this file's own "no speculative entries" rule.
+
 ## Adding a New API to This Doc
 Every entry must include all fields in the template above. No exceptions — half-documented APIs cause the most painful debugging sessions. Do not add a speculative entry for a service the project doesn't use yet just because a future sprint might need one — add it when that sprint actually confirms the need.

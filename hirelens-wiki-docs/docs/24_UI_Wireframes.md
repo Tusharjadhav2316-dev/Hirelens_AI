@@ -197,3 +197,99 @@ Add a wireframe here before a sprint that builds a new screen — it becomes the
 - Streaming indicator: three bouncing dots while `isStreaming=true`
 - Consistent with existing dashboard design system — no new design tokens introduced
 - Dark mode: all elements follow existing `dark:` Tailwind classes
+
+---
+
+## Sprint 8 — Agent Workspace (`/dashboard/agent`)
+
+> This section supersedes the aspirational "AI Career Coach (Primary Shell)" wireframe at the top of this document — that sketch predates Sprint 1's audit and was never built as drawn. The Agent Workspace below is the real Sprint 8 design, grounded in the actual confirmed Sidebar/dashboard-layout structure (`components/Sidebar.tsx`, `app/dashboard/layout.tsx`).
+
+### Desktop Layout (≥ 1024px) — Conversation + Artifact Canvas
+```
++------------------------------------------------------------------------------+
+| [icon-rail Sidebar, collapsed 16px, hover-expands - unchanged from today]    |
++--+---------------------------------+-------------------------------------+--+
+|  |  AI CAREER AGENT                |  Artifact Canvas                    |  |
+|  |  "How can I help you today?"    |                                     |  |
+|  |                                  |  [ empty state until an artifact ]  |  |
+|  |  Quick actions:                  |  [ arrives - see empty state below] |  |
+|  |  [Build Resume] [Check ATS]      |                                     |  |
+|  |  [Find Jobs] [Cover Letter]      |                                     |  |
+|  |  [Prep Interview]                |                                     |  |
+|  |                                  |                                     |  |
+|  |  --- conversation scrolls ---    |                                     |  |
+|  |  You: improve my summary         |                                     |  |
+|  |                                  |                                     |  |
+|  |  Manager Agent                   |                                     |  |
+|  |  v Understanding request         |                                     |  |
+|  |  Resume Agent                    |                                     |  |
+|  |  v Reading resume                |                                     |  |
+|  |  Optimizer Agent                 |                                     |  |
+|  |  * Generating improvement...     |                                     |  |
+|  |                                  |                                     |  |
++--+---------------------------------+-------------------------------------+--+
+|  [==================== Ask HireLens AI... ============] [Send]              |
++------------------------------------------------------------------------------+
+```
+
+### Artifact Canvas — Resume Diff State
+```
++---------------------------------------------------------+
+|  Proposed Change — Summary                                |
++---------------------------------------------------------+
+|  CURRENT:                                                  |
+|  "Built React applications."                               |
+|                                                             |
+|  SUGGESTED:                                                |
+|  "Engineered React applications serving 10k+ daily users." |
+|                                                             |
+|  Rationale: adds measurable scope; matches JD keyword       |
+|  "React" already present, strengthens impact language.      |
++---------------------------------------------------------+
+|                          [ Reject ]        [ Apply Change ] |
++---------------------------------------------------------+
+```
+
+### Artifact Canvas — ATS Score Card State (mirrors existing `ATSScorePanel.tsx` data shape)
+```
++---------------------------------------------------------+
+|  ATS Analysis — Deterministic Engine Result                |
+|  Overall Score: 68/100  [====================------------]|
++---------------------------------------------------------+
+|  Summary 72  Experience 65  Skills 55  Projects 70  Edu 90 |
+|  Keyword Integration 60  Impact 58  Completeness 75         |
++---------------------------------------------------------+
+|  Agent explanation: "Your Skills section is the biggest     |
+|  drag on your score - missing: Kubernetes, CI/CD..."        |
++---------------------------------------------------------+
+```
+
+### Artifact Canvas — Job Result Card State (new capability, Sprint 8)
+```
++---------------------------------------------------------+
+|  Senior Backend Engineer - Acme Corp                       |
+|  Pune, India (Hybrid) - via [ProviderName]                 |
+|  Relevant skills: Node.js, PostgreSQL, AWS                  |
+|  [ View Job ]   [ Tailor Cover Letter ]   [ Skill Gap ]      |
++---------------------------------------------------------+
+|  (repeats per listing; empty state shown if provider is     |
+|   not yet configured - see NullJobProvider in 20_Decision_Log.md)|
++---------------------------------------------------------+
+```
+
+### Empty / Loading / Error / Streaming States
+| State | Canvas behaviour |
+|---|---|
+| Empty (no artifact yet) | Friendly placeholder: "Ask me to build, analyze, or improve your resume, find jobs, or prep for an interview — results will show up here." |
+| Agent activity streaming | Live-updating checklist (`agent_activity` artifact): pending / active (spinner) / done (check) / error (red) per agent step |
+| Tool executing | Inline "Running ATS analysis..." label under the active agent step, sourced from `tool_started` events |
+| Success | Artifact renders with primary action buttons enabled |
+| Retry | On `error` event, canvas shows the error message + a `[ Try Again ]` button that re-sends the last user message |
+| Job provider not configured | `job_result_card` renders a single explanatory card, not an empty silent list — "Job search isn't connected yet" |
+
+### Mobile Layout (≤ 640px)
+Single-column, tab-switchable: a `[Chat]` / `[Results]` segmented control replaces the side-by-side split, matching the existing mobile Sidebar drawer pattern (`isOpen`/`setIsOpen` in `Sidebar.tsx`) rather than introducing a new responsive paradigm.
+
+### Design Notes
+- Built on the existing HireLens design system (Tailwind CSS v4 tokens, `globals.css`) and current light/dark theme (`ThemeProvider.tsx`) — no new visual language introduced (that is Sprint 11's explicit scope).
+- The Sprint 8 Sidebar addition: a new top entry "AI Career Agent" above "Dashboard" (see `Sprint_08/Day_07.md`), since the brief specifies the agent becomes the primary post-login experience. "AI Career Coach" (Sprint 6) remains in the Sidebar, unchanged, as a secondary/direct-access entry.

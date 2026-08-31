@@ -39,3 +39,13 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 6 | 6 | ATS intelligence grounding + JD context panel | `Sprint_06/Day_06.md` |
 | 6 | 7 | UX hardening — errors, input limits, context inspector, responsive | `Sprint_06/Day_07.md` |
 | 6 | 8 | `tests/careerCoachSafety.test.ts` — 37 assertions + 5 manual QA | `Sprint_06/Day_08.md` |
+| 8 | 1 | Scaffold `agent-service/` (FastAPI), internal JWT auth, `/api/agent/chat` proxy route | `Sprint_08/Day_01.md` |
+| 8 | 2 | Manager Agent + 7 specialized agent role/goal/backstory definitions, hierarchical Crew | `Sprint_08/Day_02.md` |
+| 8 | 3 | `/api/internal/ats-score`, `/api/internal/jd-match`, resume/ATS/optimizer/cover-letter tools | `Sprint_08/Day_03.md` |
+| 8 | 4 | `JobSearchTool` + `JobProviderAdapter`, interview prep tools, existing-feature wiring | `Sprint_08/Day_04.md` |
+| 8 | 5 | Application workflow sequencing, Manager delegation logic, task planning | `Sprint_08/Day_05.md` |
+| 8 | 6 | NDJSON streaming event protocol, Next.js proxy passthrough | `Sprint_08/Day_06.md` |
+| 8 | 7 | Agent Workspace shell (`/dashboard/agent`), Sidebar entry, default post-login route | `Sprint_08/Day_07.md` |
+| 8 | 8 | Generative UI artifact renderers, closed artifact-type union | `Sprint_08/Day_08.md` |
+| 8 | 9 | Apply/Reject resume-diff flow, `agentUsage` rate-limit counter, cost/security hardening | `Sprint_08/Day_09.md` |
+| 8 | 10 | Safety/authorization/schema test suites, full regression pass, Sprint 8 close-out | `Sprint_08/Day_10.md` |

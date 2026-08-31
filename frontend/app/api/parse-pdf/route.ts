@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/verifyAuth';
+
 const pdfParse = require('pdf-parse');
+
+/**
+ * Extracts plain text from a DOCX buffer using XML tag matching.
+ */
+function extractDocxText(buffer: Buffer): string {
+    const str = buffer.toString('utf-8');
+    const matches = str.match(/<w:t[^>]*>(.*?)<\/w:t>/g);
+    if (matches && matches.length > 0) {
+        return matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ').trim();
+    }
+    // Fallback: strip non-printable ASCII / XML tags
+    return str.replace(/<[^>]+>/g, ' ').replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export async function POST(req: Request) {
     try {
@@ -20,15 +34,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-        if (!isPdf) {
-            return NextResponse.json(
-                { error: 'Invalid file type. Only PDF files are allowed.' },
-                { status: 400 }
-            );
-        }
-
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
         if (file.size > MAX_FILE_SIZE) {
             return NextResponse.json(
                 { error: 'File size exceeds 5MB limit.' },
@@ -36,27 +42,63 @@ export async function POST(req: Request) {
             );
         }
 
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const data = await pdfParse(buffer);
-
-        if (!data.text || data.text.trim().length === 0) {
+        if (file.size === 0) {
             return NextResponse.json(
-                { error: 'Could not extract text from the provided PDF.' },
+                { error: 'File is empty.' },
                 { status: 400 }
             );
         }
 
+        const fileName = (file.name || 'document').toLowerCase();
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        let extractedText = '';
+
+        if (fileName.endsWith('.pdf') || file.type.includes('pdf')) {
+            const data = await pdfParse(buffer);
+            extractedText = data.text || '';
+        } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc') || file.type.includes('word')) {
+            extractedText = extractDocxText(buffer);
+        } else if (
+            fileName.endsWith('.txt') ||
+            fileName.endsWith('.md') ||
+            fileName.endsWith('.json') ||
+            fileName.endsWith('.csv') ||
+            file.type.includes('text')
+        ) {
+            extractedText = buffer.toString('utf-8');
+        } else {
+            return NextResponse.json(
+                { error: 'Unsupported file type. Please upload a PDF, DOCX, or TXT document.' },
+                { status: 400 }
+            );
+        }
+
+        extractedText = extractedText.trim();
+        if (!extractedText) {
+            return NextResponse.json(
+                { error: 'Could not extract readable text from the uploaded document.' },
+                { status: 400 }
+            );
+        }
+
+        // Truncate safely at 25k characters to protect LLM context windows
+        const truncatedText = extractedText.length > 25000 
+            ? extractedText.substring(0, 25000) + "\n\n[Content truncated at 25,000 characters]"
+            : extractedText;
+
         return NextResponse.json({
-            extractedText: data.text,
-            text: data.text
+            filename: file.name,
+            mimeType: file.type || 'text/plain',
+            size: file.size,
+            extractedText: truncatedText,
+            text: truncatedText
         });
 
     } catch (error) {
-        console.error('PDF parsing error:', error);
+        console.error('Document parsing error:', error);
         return NextResponse.json(
-            { error: 'Failed to parse PDF.' },
+            { error: 'Failed to parse uploaded document.' },
             { status: 500 }
         );
     }

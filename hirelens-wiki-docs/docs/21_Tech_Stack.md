@@ -44,7 +44,17 @@
 | Env variable | `OPENROUTER_API_KEY` (server-side only) | `ENVIRONMENT_VERIFICATION.md` §3 |
 
 ## Agent Orchestration
-**Not present. Not in scope for Sprint 2 or the near-term roadmap** — per `04_Project_Rules.md`, this section stays empty until a sprint dedicated to it is actually reached; the earlier CrewAI proposal from the original redesign report remains unconfirmed and unscheduled.
+**Confirmed for Sprint 8 (planned).** Per Project Rule 7, CrewAI is confirmed as still appropriate now that a dedicated sprint has been reached — see `20_Decision_Log.md`, ADR "CrewAI Deployment Boundary."
+
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Agent framework | CrewAI (Python) | `Sprint_08/Day_01.md` |
+| Hosting boundary | Standalone FastAPI microservice (`agent-service/`), deployed separately from the Vercel-hosted Next.js app (Railway/Render/Fly — final host chosen at implementation time based on cost; not a code-level dependency) | `Sprint_08/Day_01.md` Decision Log entry |
+| Inter-service auth | Next.js verifies the Firebase ID token, mints a short-lived internal JWT (`INTERNAL_AGENT_JWT_SECRET`, HS256, 60s expiry) carrying only `uid` + `iat`/`exp`; Python verifies that JWT on every request | `Sprint_08/Day_01.md` |
+| LLM provider (agents) | OpenRouter, same `google/gemini-2.5-flash` model as existing routes, called directly from Python via `httpx` (not proxied back through Node) | `Sprint_08/Day_02.md` |
+| Deterministic tool calls | Python tools call back into existing Next.js internal endpoints (`/api/internal/ats-score`, `/api/internal/jd-match`, `/api/ai-improve`, `/api/cover-letter`) — no scoring or optimization logic is reimplemented in Python | `Sprint_08/Day_03.md` |
+| Streaming transport | FastAPI `StreamingResponse` emitting newline-delimited JSON (NDJSON) agent events; Next.js proxy re-streams the same bytes via native `ReadableStream` (no new frontend dependency, consistent with the Sprint 6 streaming pattern) | `Sprint_08/Day_06.md` |
+| Cost/loop control | CrewAI `max_iter` per task, per-request wall-clock timeout enforced by the Next.js proxy's `AbortController`, and a Firestore-backed daily request counter per user (`users/{uid}/agentUsage/{date}`) | `Sprint_08/Day_09.md` |
 
 ## Deployment
 | Layer | Technology | Confirmed Via |
@@ -84,3 +94,22 @@
 | Resume context | `useResume()` + `buildResumeContextBlock()` — client-side pure function | Sprint 6, Day 5 |
 | ATS context | `analyzeResume()` (deterministic, client-side) + `buildATSContextBlock()` | Sprint 6, Day 6 |
 | Conversation state | React `useState` — session-only, not persisted | Sprint 6 Decision Log |
+
+## Sprint 8 Additions (Planned)
+
+### New Backend Service
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Framework | FastAPI (Python 3.11+) | `Sprint_08/Day_01.md` — first Python component in the repository |
+| Agent framework | CrewAI | `Sprint_08/Day_02.md` |
+| HTTP client (tool → Next.js) | `httpx` (async) | `Sprint_08/Day_03.md` |
+| Validation | Pydantic v2 models for every tool input/output and the structured `AgentResponse` envelope | `Sprint_08/Day_03.md` |
+| Package/dependency management | `pip` + `requirements.txt` (or `uv`, confirmed at implementation time — no code-level impact either way) | `Sprint_08/Day_01.md` |
+| Testing | Pytest + `httpx.AsyncClient`, matching the convention already reserved in `08_Testing_Guide.md` | `Sprint_08/Day_10.md` |
+
+### New Frontend Surfaces
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Agent Workspace route | `app/dashboard/agent/page.tsx`, new default post-login redirect target | `Sprint_08/Day_07.md` |
+| Generative UI components | React components under `components/agent/` rendering a closed set of known artifact types only — the model never generates arbitrary executable UI | `Sprint_08/Day_08.md` |
+| New Firestore collection | `users/{uid}/agentUsage/{date}` — daily request-count document for cost control only; **no** persistent agent conversation memory is introduced | `Sprint_08/Day_09.md` Decision Log entry |

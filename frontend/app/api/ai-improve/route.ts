@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/verifyAuth";
+import { verifyAuthOrInternalJwt } from "@/lib/verifyInternalJwt";
 import {
     RESUME_OPTIMIZER_PERSONA,
     HALLUCINATION_GUARDRAIL,
@@ -13,9 +13,9 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function POST(req: Request) {
     try {
-        const decodedUser = await verifyAuth(req);
-    } catch (authError) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const decodedUser = await verifyAuthOrInternalJwt(req);
+    } catch (authError: any) {
+        return NextResponse.json({ error: authError?.message || "Unauthorized" }, { status: 401 });
     }
 
     if (!OPENROUTER_API_KEY) {

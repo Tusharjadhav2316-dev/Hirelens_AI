@@ -199,3 +199,229 @@ Automated tests in `careerCoachSafety.test.ts` verify all three labels are prese
 | `tests/atsBenchmark.test.ts` | ATS scoring accuracy, quality hierarchy | `npx tsx tests/atsBenchmark.test.ts` |
 | `tests/optimizerSafety.test.ts` | Prompt guardrails, optimizer modes, JD injection | `npx tsx tests/optimizerSafety.test.ts` |
 | `tests/careerCoachSafety.test.ts` | Coach prompt rules, context builders, history trimming | `npx tsx tests/careerCoachSafety.test.ts` |
+
+---
+
+## Sprint 8 Architecture — CrewAI Multi-Agent System & AI-First Agent Workspace
+
+> Planning-stage architecture. Implementation detail and any deltas discovered during build live in `Sprint_08/Day_01.md` through `Day_10.md`; this section is the pre-build design of record.
+
+### High-Level System Diagram
+
+```
+                              USER (browser)
+                                    |
+                                    v
+                       /dashboard/agent  (Agent Workspace)
+                       new default post-login route
+                                    |
+                    fetch("/api/agent/chat", {messages, resume, jd?})
+                                    v
+   ================== EXISTING NEXT.JS APP (unchanged runtime) ==================
+   |                                |                                            |
+   |  /api/agent/chat/route.ts (NEW - authenticated proxy)                       |
+   |     1. verifyAuth(req)        -> existing Firebase Admin check              |
+   |     2. mint internal JWT {uid}                                              |
+   |     3. POST to agent-service, stream NDJSON back verbatim                   |
+   |                                                                              |
+   |  /api/internal/ats-score  (NEW)  -> wraps atsEngine.ts / atsAnalyzer.ts     |
+   |  /api/internal/jd-match   (NEW)  -> wraps jdMatcher.ts (analyzeJobMatch)    |
+   |  /api/ai-improve           (EXISTING, unchanged) -> resume optimizer        |
+   |  /api/cover-letter         (EXISTING, unchanged) -> cover letter generator  |
+   |  /api/career-coach         (EXISTING, unchanged) -> standalone Coach chat   |
+   ================================================================================
+                                    |
+                       X-Internal-Auth: <JWT>  (uid only, never trusted from body)
+                                    v
+                 ============ agent-service (NEW Python/FastAPI) ============
+                 |                                                            |
+                 |   POST /chat  ->  CrewAI hierarchical Crew, kicked off     |
+                 |   with request-scoped context: {uid, resume, ats?, jd?}    |
+                 |                                                            |
+                 |                     MANAGER AGENT                          |
+                 |             (intent detection + delegation)                |
+                 |         /        |        |        |       |      \       |
+                 |    Resume      ATS     Optimizer  Career  Job    Interview |
+                 |    Agent      Agent     Agent     Agent  Search   Coach    |
+                 |                                            Agent  Agent   |
+                 |         \        |        |        |       |      /       |
+                 |                  TOOLS (typed, Pydantic-validated)        |
+                 |     get_resume · get_ats_analysis · optimize_section       |
+                 |     generate_cover_letter · search_jobs · analyze_gap      |
+                 |     prepare_interview_qs · evaluate_interview_answer       |
+                 |                          |                                |
+                 |         each tool either reads the request-scoped         |
+                 |         context directly, or makes an authenticated       |
+                 |         HTTPS call back into the Next.js internal/        |
+                 |         existing endpoints above (never re-implements     |
+                 |         their logic)                                      |
+                 =============================================================
+                                    |
+                       AgentResponse {message, agent, status, actions, artifacts, ui}
+                       streamed as NDJSON events
+                                    v
+                       Next.js proxy re-streams verbatim
+                                    v
+                       Browser: Agent Workspace renders Generative UI artifacts
+                                    v
+                       User: Apply / Reject on any proposed change
+                                    v
+                       Apply -> ResumeContext.updateResume() (client-side only)
+```
+
+### Agent Hierarchy — Core vs. Optional/Future vs. Deterministic Tools
+
+**Core Sprint 8 Agents** (multi-step reasoning or specialized context justifies a dedicated agent):
+| Agent | Responsibility | Tools it may call |
+|---|---|---|
+| Manager Agent | Intent detection, task planning, delegation, response assembly | none directly — delegates only |
+| Resume Agent | Inspect resume state, identify missing sections, guide creation/editing, propose structured changes | `get_resume`, `propose_resume_change` |
+| ATS Agent | Explain deterministic ATS results, prioritize fixes — never scores itself | `get_ats_analysis` |
+| Optimizer Agent | Orchestrate the existing 5-mode resume optimizer | `optimize_resume_section` |
+| Career Agent | Open-ended career coaching turns, ported Career Coach persona | `get_resume` (context only) |
+| Job Search Agent | Find and rank job listings using resume/ATS context | `search_jobs`, `analyze_skill_gap` |
+| Interview Coach Agent | Generate interview questions, evaluate answers, give feedback | `prepare_interview_questions`, `evaluate_interview_answer` |
+
+**Deterministic Tools** (no dedicated agent — invoked directly by whichever agent needs them; see `20_Decision_Log.md` for why Cover Letter and Skill Gap are tools, not agents):
+- `get_resume` — request-scoped context accessor (no DB call)
+- `get_ats_analysis` — calls `/api/internal/ats-score`
+- `optimize_resume_section` — calls existing `/api/ai-improve`
+- `generate_cover_letter` — calls existing `/api/cover-letter`
+- `analyze_skill_gap` — calls `/api/internal/jd-match`
+- `search_jobs` — calls `JobProviderAdapter` (see Job Search Tool Contract below)
+- `prepare_interview_questions` / `evaluate_interview_answer` — direct OpenRouter calls, no backend dependency
+- `propose_resume_change` — pure function producing a structured diff artifact; never writes anywhere
+
+**Optional / Future Agents** (explicitly deferred — see `20_Decision_Log.md`):
+- Company Research Agent — no verified data source exists yet; requires a web-search/company-data tool not currently in scope
+- Application Planning Agent — Sprint 8's "application workflow" is the Manager sequencing existing agents (Resume → ATS → Job → Skill Gap → Optimizer → Cover Letter), not a distinct reasoning role; promote to a dedicated agent only if that sequencing logic grows complex enough to need its own state machine
+- Study Roadmap / dedicated Skill Gap Agent — full personalized learning-path generation remains Sprint 10 scope
+
+### Sprint 8 Tool Contracts
+
+```python
+# resume_tools.py
+def get_resume(ctx: RequestContext) -> ResumeSnapshot:
+    """Returns the resume JSON the client sent with this request. No DB access."""
+
+def propose_resume_change(section: str, item_id: str | None, before: str, after: str, rationale: str) -> ResumeDiffArtifact:
+    """Pure function. Returns a structured diff artifact for UI review. Never mutates anything."""
+
+# ats_tools.py
+def get_ats_analysis(ctx: RequestContext, job_description: str | None = None) -> ATSResult:
+    """Calls POST /api/internal/ats-score with {resume, jobDescription?} + internal JWT.
+    Returns the exact ATSResult shape produced by atsEngine.ts - never recomputed locally."""
+
+# optimizer_tools.py
+def optimize_resume_section(section: str, content: str, mode: OptimizerMode, job_description: str | None = None) -> str:
+    """Calls existing POST /api/ai-improve. Reuses all 5 existing modes unchanged."""
+
+# cover_letter_tools.py
+def generate_cover_letter(job_title: str, company_name: str, tone: str, job_description: str | None = None) -> str:
+    """Calls existing POST /api/cover-letter with action=generate. Resume text sourced from ctx.resume."""
+
+# job_search_tools.py
+class JobProviderAdapter(Protocol):
+    async def search(self, query: JobSearchQuery) -> list[NormalizedJobListing]: ...
+
+def search_jobs(ctx: RequestContext, query: JobSearchQuery) -> list[NormalizedJobListing]:
+    """Delegates to the configured JobProviderAdapter (NullJobProvider until a real
+    provider is selected - see 20_Decision_Log.md). Never scrapes directly."""
+
+# skill_gap_tools.py
+def analyze_skill_gap(ctx: RequestContext, job_description: str) -> SkillGapResult:
+    """Calls POST /api/internal/jd-match, wrapping jdMatcher.ts's analyzeJobMatch().
+    Returns matched/missing skills - never invents a candidate skill not in the resume."""
+
+# interview_tools.py
+def prepare_interview_questions(ctx: RequestContext, job_description: str | None, focus: str | None) -> list[InterviewQuestion]:
+    """Direct OpenRouter call. Grounded in resume + JD only - no fabricated candidate facts assumed."""
+
+def evaluate_interview_answer(question: str, answer: str, ctx: RequestContext) -> InterviewFeedback:
+    """Direct OpenRouter call. Feedback on clarity/structure/specificity - never a pass/fail verdict."""
+```
+
+### New Internal Next.js Endpoints (Sprint 8)
+
+| Route | Wraps | Auth | Notes |
+|---|---|---|---|
+| `POST /api/internal/ats-score` | `atsEngine.ts` + `atsAnalyzer.ts` (`analyzeResumeQuality` / `analyzeResumeMatch`) | Internal JWT (`X-Internal-Auth`), not a Firebase user token | Deterministic; same code path the client already uses via `atsAnalyzer.ts`, exposed over HTTP for the Python service |
+| `POST /api/internal/jd-match` | `jdMatcher.ts` (`analyzeJobMatch`) | Internal JWT | Powers `analyze_skill_gap` |
+
+Both routes are **internal-only by convention** (not enforced by network topology in Sprint 8, since `agent-service` is a separate deploy target reachable over the public internet) — enforced instead by requiring the internal JWT, which only the Next.js proxy can mint. A public caller without that JWT receives `401`.
+
+### Generative UI — Structured Response Protocol
+
+```typescript
+interface AgentResponse {
+  message: string;                 // agent's natural-language reply
+  agent: string;                   // which agent produced this (for the activity trace)
+  status: "in_progress" | "completed" | "needs_input" | "error";
+  actions: AgentAction[];          // e.g. { label: "Apply", type: "apply_resume_diff", payload }
+  artifacts: Artifact[];           // typed UI artifacts, closed set - see below
+  ui?: { layout?: "default" | "split" };
+}
+
+type Artifact =
+  | { type: "ats_score_card"; data: ATSResult }
+  | { type: "resume_diff"; data: { section: string; itemId?: string; before: string; after: string; rationale: string } }
+  | { type: "job_result_card"; data: NormalizedJobListing[] }
+  | { type: "skill_gap_card"; data: SkillGapResult }
+  | { type: "cover_letter_preview"; data: { content: string } }
+  | { type: "interview_question_card"; data: InterviewQuestion[] }
+  | { type: "agent_activity"; data: { steps: { agent: string; status: "pending"|"active"|"done"|"error" }[] } }
+  | { type: "task_progress"; data: { label: string; percent: number } };
+```
+
+The frontend (`components/agent/ArtifactRenderer.tsx`) switches on `artifact.type` against this closed union — an unrecognized type is dropped with a console warning, never rendered as raw HTML/markdown-as-UI. This is the concrete mechanism satisfying "the model must NOT be allowed to generate arbitrary executable UI."
+
+### Streaming Event Schema (NDJSON, one JSON object per line)
+
+```typescript
+type AgentEvent =
+  | { type: "agent_started"; agent: string }
+  | { type: "agent_completed"; agent: string }
+  | { type: "tool_started"; agent: string; tool: string }
+  | { type: "tool_completed"; agent: string; tool: string }
+  | { type: "message_delta"; agent: string; text: string }
+  | { type: "artifact"; artifact: Artifact }
+  | { type: "action_required"; actions: AgentAction[] }
+  | { type: "error"; message: string }
+  | { type: "completed" };
+```
+No event carries hidden chain-of-thought — only high-level status labels ("Reading resume", "Running ATS analysis", "Generating improvement"), matching the brief's "do not expose internal chain-of-thought" requirement.
+
+### Resume Safety — Apply/Reject Enforcement Path
+
+```
+Optimizer Agent calls optimize_resume_section()
+  -> returns improved text (string)
+Resume Agent wraps it via propose_resume_change()
+  -> ResumeDiffArtifact { before, after, rationale }  (pure, no mutation)
+NDJSON "artifact" event { type: "resume_diff", data }
+  -> Agent Workspace renders diff with [Apply] [Reject]
+User clicks Apply
+  -> client-side only: useResume().updateResume({...}) via ResumeContext
+  -> agent-service and Firestore are never touched by this step
+```
+This is the literal mechanism behind the non-negotiable "the agent must never silently modify the user's resume" rule — the mutation function (`updateResume`) is only ever called from a client-side click handler, never from anything agent- or server-driven.
+
+### State Management Classification
+
+| State | Scope | Where it lives |
+|---|---|---|
+| Resume being edited | Request-scoped (sent fresh each call) | `ResumeContext` (client React state) — unchanged from pre-Sprint-8 |
+| Agent conversation history | Session-scoped | Client `useState` in `app/dashboard/agent/page.tsx`, same pattern as Sprint 6 Career Coach |
+| ATS result | Request-scoped | Computed client-side via `analyzeResume()` or returned fresh by `get_ats_analysis` per call — never cached server-side |
+| Daily request count | Persistent (minimal) | `users/{uid}/agentUsage/{date}` — the one new Firestore collection |
+| Agent "memory" / cross-session context | **Not implemented** | Explicitly deferred; see `20_Decision_Log.md` |
+
+### Security Architecture Summary
+- **Cross-user data access:** prevented by the internal JWT carrying only a server-verified `uid`; no tool ever accepts a client-supplied `userId`.
+- **Prompt injection (resume/JD content):** every tool that forwards resume or JD text into a prompt continues to apply the existing `HALLUCINATION_GUARDRAIL` pattern; job descriptions and resume free-text are treated as untrusted content in the prompt, never as instructions.
+- **Tool injection / unauthorized tool execution:** each agent's tool list is a hard-coded Python allowlist (not model-selectable at runtime) — an agent cannot invoke a tool CrewAI didn't explicitly register for it, tested in `agent-service/tests/test_tool_authorization.py`.
+- **Runaway costs / loops:** `max_iter`, wall-clock timeouts, token caps, and the daily Firestore counter (see `10_CrewAI_Guide.md`).
+- **Malformed structured responses:** every `AgentResponse` and `AgentEvent` validates against its Pydantic schema before being emitted; a validation failure becomes a structured `error` event, not a malformed stream.
+
+### Existing Features — Explicitly Unmodified
+Resume Builder, ATS Analyzer, Resume Optimizer forms, Cover Letter page, standalone Career Coach page, Firebase Auth, Firestore history/profile, and all three existing test suites (`atsBenchmark`, `optimizerSafety`, `careerCoachSafety`) continue to run exactly as before Sprint 8. Sprint 8 adds a new default landing route and new internal endpoints; it does not touch the code paths behind any existing Sidebar entry.
