@@ -7,7 +7,8 @@ import ConversationPane, { Message } from "@/components/agent/ConversationPane";
 import ArtifactCanvas from "@/components/agent/ArtifactCanvas";
 import { TraceStep, updateTraceFromEvent } from "@/components/agent/AgentActivityTrace";
 import { streamAgentEvents, AgentEvent } from "@/lib/agentStreamClient";
-import { Artifact, AgentAttachment, AttachmentCategory } from "@/types/agent";
+import { Artifact, AgentAttachment, AttachmentCategory, InterviewSessionState } from "@/types/agent";
+import InterviewSetup, { InterviewConfig } from "@/components/agent/InterviewSetup";
 import { MessageSquare, Layers } from "lucide-react";
 
 export default function AgentWorkspacePage() {
@@ -22,6 +23,10 @@ export default function AgentWorkspacePage() {
     const [artifacts, setArtifacts] = useState<Artifact[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"chat" | "canvas">("chat");
+
+    // Interview Session State
+    const [interviewSession, setInterviewSession] = useState<InterviewSessionState | null>(null);
+    const [showInterviewSetup, setShowInterviewSetup] = useState<boolean>(false);
 
     // Conversation-Scoped Persistent Attachments
     const [sessionAttachments, setSessionAttachments] = useState<AgentAttachment[]>([]);
@@ -52,10 +57,35 @@ export default function AgentWorkspacePage() {
         return "document";
     };
 
-    // Quick action handler: pre-fills input without auto-sending
+    // Quick action handler: pre-fills input or opens interview setup
     const handleSelectQuickAction = useCallback((prompt: string) => {
-        setInput(prompt);
+        if (prompt.toLowerCase().includes("interview") || prompt.toLowerCase().includes("mock")) {
+            setShowInterviewSetup(true);
+            setActiveTab("canvas");
+        } else {
+            setInput(prompt);
+        }
     }, []);
+
+    const handleStartInterview = (config: InterviewConfig) => {
+        setShowInterviewSetup(false);
+        const startMsg = `Start a ${config.interviewType} mock interview for the ${config.targetRole} role with starting difficulty ${config.difficulty}`;
+        handleSendMessage(startMsg);
+    };
+
+    const handleCancelInterview = () => {
+        setInterviewSession(null);
+        setShowInterviewSetup(false);
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: `msg-cancel-${Date.now()}`,
+                sender: "assistant",
+                text: "Mock interview session cancelled. You can start a new interview anytime using the Quick Actions.",
+                timestamp: new Date(),
+            },
+        ]);
+    };
 
     // Core stream handler with conversation-scoped attachments
     const handleSendMessage = async (textToSend: string, newAttachments: any[] = []) => {
@@ -147,6 +177,7 @@ export default function AgentWorkspacePage() {
                     })),
                     resume: resume || {},
                     attachments: payloadAttachments,
+                    interview_session: interviewSession,
                 }),
                 signal: controller.signal,
             });
@@ -181,6 +212,14 @@ export default function AgentWorkspacePage() {
                 } else if (event.type === "artifact" && (event as any).artifact) {
                     const newArtifact = (event as any).artifact as Artifact;
                     setArtifacts((prev) => [...prev, newArtifact]);
+
+                    // Persist or update active interview session state across turns
+                    if (newArtifact.data && (newArtifact.data as any).session) {
+                        setInterviewSession((newArtifact.data as any).session);
+                    }
+                    if (newArtifact.type === "interview_report_card") {
+                        setInterviewSession(null);
+                    }
                     setActiveTab("canvas");
                 } else if (event.type === "error") {
                     setError(event.message);
@@ -297,6 +336,12 @@ export default function AgentWorkspacePage() {
                         error={error}
                         onRetry={handleRetry}
                         onImproveResume={() => handleSendMessage("Improve my summary to boost ATS score")}
+                        onSubmitInterviewAnswer={(ans) => handleSendMessage(ans)}
+                        onCancelInterview={handleCancelInterview}
+                        isSubmittingAnswer={isStreaming}
+                        showInterviewSetup={showInterviewSetup}
+                        onStartInterview={handleStartInterview}
+                        onCancelInterviewSetup={() => setShowInterviewSetup(false)}
                     />
                 </div>
             </div>

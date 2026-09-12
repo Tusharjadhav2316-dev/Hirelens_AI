@@ -8,15 +8,26 @@ import JobResultCard from "./artifacts/JobResultCard";
 import SkillGapCard from "./artifacts/SkillGapCard";
 import CoverLetterPreview from "./artifacts/CoverLetterPreview";
 import InterviewQuestionCard from "./artifacts/InterviewQuestionCard";
+import InterviewFeedbackCard from "./artifacts/InterviewFeedbackCard";
+import InterviewReportCard from "./artifacts/InterviewReportCard";
 import TaskProgress from "./artifacts/TaskProgress";
 import ResumePreviewCard from "./artifacts/ResumePreviewCard";
 
 interface ArtifactRendererProps {
     artifact: Artifact | any;
     onImproveResume?: () => void;
+    onSubmitInterviewAnswer?: (answer: string) => void;
+    onCancelInterview?: () => void;
+    isSubmittingAnswer?: boolean;
 }
 
-export function ArtifactRenderer({ artifact, onImproveResume }: ArtifactRendererProps) {
+export function ArtifactRenderer({
+    artifact,
+    onImproveResume,
+    onSubmitInterviewAnswer,
+    onCancelInterview,
+    isSubmittingAnswer = false,
+}: ArtifactRendererProps) {
     // 1. Runtime validation for untrusted NDJSON payload data
     if (!artifact || typeof artifact !== "object" || typeof artifact.type !== "string") {
         console.warn("[ArtifactRenderer] Malformed artifact ignored (missing object or type):", artifact);
@@ -49,7 +60,25 @@ export function ArtifactRenderer({ artifact, onImproveResume }: ArtifactRenderer
                 return <CoverLetterPreview data={typedArtifact.data} />;
 
             case "interview_question_card":
-                return <InterviewQuestionCard data={typedArtifact.data} />;
+                return (
+                    <InterviewQuestionCard
+                        data={typedArtifact.data}
+                        onSubmitAnswer={onSubmitInterviewAnswer}
+                        onCancelInterview={onCancelInterview}
+                        isSubmitting={isSubmittingAnswer}
+                    />
+                );
+
+            case "interview_feedback_card":
+                return <InterviewFeedbackCard data={typedArtifact.data} />;
+
+            case "interview_report_card":
+                return (
+                    <InterviewReportCard
+                        data={typedArtifact.data}
+                        onImproveResume={onImproveResume}
+                    />
+                );
 
             case "task_progress":
                 return <TaskProgress data={typedArtifact.data} />;

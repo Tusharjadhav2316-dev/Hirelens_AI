@@ -1,6 +1,9 @@
 # HireLens 2.0 — CrewAI Guide
 
-> Confirmed in Sprint 8. Framework choice logged in `20_Decision_Log.md` ("CrewAI Deployment Boundary"). Full day-by-day implementation detail lives in `Sprint_08/`.
+> Confirmed in Sprint 8, delivered and running in production. Framework choice logged in `20_Decision_Log.md` ("CrewAI Deployment Boundary"). Full day-by-day implementation detail lives in `Sprint_08/`.
+
+## ⚠️ Sprint 9 Audit Correction — Actual Routing Mechanism
+This guide's original text (below) describes the *planned* execution model: LLM-driven, `Process.hierarchical` CrewAI delegation. Direct inspection during Sprint 9's Day 1 audit confirms the **actual delivered** mechanism differs: `agent-service/crew/manager.py`'s `process_manager_request_async` is a deterministic, keyword-matched `if`/`elif` router that calls tool functions directly (`._run()`). The CrewAI `Agent`/`Crew`/`Task` objects described below are real and correctly structured (satisfying tool-authorization tests), but `Crew.kickoff()` has zero call sites anywhere in the codebase — the Manager Agent and its delegation graph are not actually exercised at request time today. Read the sections below as the intended *design*, and this note as the *ground truth correction* — Sprint 9 builds its Interview Manager against the ground truth, not the original design. See `20_Decision_Log.md`'s Sprint 9 ADR for full reasoning.
 
 ## Current State (as of Sprint 8 planning)
 CrewAI is **not yet installed** anywhere in the repository. `Hirelens_AI-main/frontend` is a pure Next.js/TypeScript application with zero Python files, no `requirements.txt`, and no Python-capable deployment config. This confirms the Sprint 1 finding that the original redesign report's CrewAI proposal was aspirational, not implemented. Sprint 8 is the first sprint to introduce it.
@@ -67,3 +70,25 @@ Full test matrix in `Sprint_08/Day_10.md`.
 - Agent activity events (`agent_started`, `tool_started`, `tool_completed`, `agent_completed`) are logged server-side with the request's `uid` and a request-scoped trace ID — no resume content or chat text is logged (see `26_Risks.md`, "Privacy: Resume Data in Client-Side Logs" and its Sprint 8 counterpart).
 - A stuck/looping agent is diagnosed via the `max_iter` ceiling being hit — this is surfaced to the user as a structured `error` event ("I wasn't able to complete that - try rephrasing"), never a silent hang.
 - Tool-call failures against internal Next.js endpoints return a structured error the calling agent must handle (explain to the user, do not fabricate a fallback result).
+
+---
+
+## Sprint 9 Addition — Interview Manager as a Plain Module, Not an Agent
+
+`agent-service/crew/interview_manager.py` implements interview session lifecycle (start, present question, process answer, adaptive follow-up decision, complete/report). It is a plain Python module with ordinary functions, not a CrewAI `Agent`. This follows the precedent already set by `crew/workflows.py` (Sprint 8's "apply to this job" multi-step sequencing, also a plain module) and is a deliberate consequence of the routing-mechanism correction above: since no agent in this codebase is actually invoked via `Crew.kickoff()` today, adding new `Agent`-shaped objects for interview session logic would only add more of the same documentation-vs-reality gap Sprint 9's own audit just corrected. See `20_Decision_Log.md`'s "Interview Manager is a plain Python module" ADR.
+
+`interview_manager.py` is called directly from new sub-routes inside `manager.py`'s existing deterministic router (extending Route 4 from a single-shot question generator into a session-aware sub-router), exactly the same way every other capability's route already calls its tools directly.
+
+**Interview session state passed per-request (not stored anywhere server-side):**
+```python
+class InterviewSessionState(BaseModel):
+    session_id: str
+    interview_type: Literal["hr", "behavioral", "technical", "mixed"]
+    target_role: str
+    difficulty: Literal["beginner", "intermediate", "advanced"]
+    question_index: int
+    questions_asked: list[dict]      # {id, question, category, difficulty}
+    answers_given: list[dict]        # {question_id, answer, feedback}
+    status: Literal["in_progress", "completed"]
+```
+This model is defined once in `agent-service/schemas/interview_session.py` and mirrored as a TypeScript interface in `frontend/types/agent.ts` — the client constructs and holds the canonical copy; the server only reads and returns an updated copy each turn, never persists it.

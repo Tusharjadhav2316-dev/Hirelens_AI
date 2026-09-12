@@ -293,3 +293,105 @@ Single-column, tab-switchable: a `[Chat]` / `[Results]` segmented control replac
 ### Design Notes
 - Built on the existing HireLens design system (Tailwind CSS v4 tokens, `globals.css`) and current light/dark theme (`ThemeProvider.tsx`) — no new visual language introduced (that is Sprint 11's explicit scope).
 - The Sprint 8 Sidebar addition: a new top entry "AI Career Agent" above "Dashboard" (see `Sprint_08/Day_07.md`), since the brief specifies the agent becomes the primary post-login experience. "AI Career Coach" (Sprint 6) remains in the Sidebar, unchanged, as a secondary/direct-access entry.
+
+---
+
+## Sprint 9 — Interview Coach Experience (within the existing Agent Workspace)
+
+> Extends the Sprint 8 Agent Workspace's Artifact Canvas — no new route, no new page shell. All states below render inside the existing `/dashboard/agent` split-pane layout.
+
+### Interview Setup (triggered by "Prepare me for an interview" or a Quick Action chip)
+```
++---------------------------------------------------------+
+|  Set Up Your Mock Interview                                |
++---------------------------------------------------------+
+|  Interview Type                                            |
+|  ( ) HR   ( ) Behavioral   ( ) Technical   (*) Mixed        |
+|                                                             |
+|  Difficulty                                                 |
+|  ( ) Beginner  (*) Intermediate  ( ) Advanced               |
+|                                                             |
+|  Number of Questions                                        |
+|  ( ) 5   (*) 10   ( ) 15                                    |
+|                                                             |
+|  Context: Using your current resume [+ pasted job description if present]|
+|                                                             |
+|                              [ Start Interview ]             |
++---------------------------------------------------------+
+```
+Feedback-timing mode ("after each answer" vs. "end of interview," from the brief's suggested config) is **not** a separate Sprint 9 setting — feedback is always shown after each answer (matches the brief's own worked example under "Interview Feedback UX" and keeps the MVP simpler); a true "end of interview only" mode is noted as Optional/Future in `25_Backlog.md`.
+
+### Active Question State (`interview_question_card`, `isActive=true`)
+```
++---------------------------------------------------------+
+|  Technical Interview - Question 3 of 10                    |
+|  ================>-------------------- (progress)          |
++---------------------------------------------------------+
+|  "Explain the architecture of your HireLens AI project     |
+|   and the part you personally implemented."                |
++---------------------------------------------------------+
+|  +-------------------------------------------------------+ |
+|  | Type your answer...                                    | |
+|  |                                                         | |
+|  +-------------------------------------------------------+ |
+|                                          [ Submit Answer ]  |
++---------------------------------------------------------+
+```
+
+### Feedback State (`interview_feedback_card`, appears after Submit)
+```
++---------------------------------------------------------+
+|  Answer Feedback                                            |
++---------------------------------------------------------+
+|  Strengths                                                  |
+|  + Clear explanation of the overall system                 |
+|  + Good technical vocabulary                                |
+|                                                             |
+|  Improve                                                    |
+|  ! Your personal contribution vs. the team's wasn't clear   |
+|  ! No mention of a measurable outcome                       |
+|                                                             |
+|  Suggested Structure: Context -> Your Role -> Action -> Result |
++---------------------------------------------------------+
+|                                      [ Continue Interview ]  |
++---------------------------------------------------------+
+```
+If the Adaptive Follow-Up rule (see `02_Architecture.md`) fires, "Continue Interview" advances to a follow-up question instead of the next planned one — the UI does not visually distinguish a follow-up from a planned question (both render as the same Active Question State), keeping the interaction model simple.
+
+### Session Complete / Report State (`interview_report_card`)
+```
++---------------------------------------------------------+
+|  Interview Readiness Summary                                |
++---------------------------------------------------------+
+|  Technical:       Strong                                    |
+|  Communication:   Moderate                                  |
+|  Project Depth:   Needs Improvement                          |
+|  Behavioral:      Strong                                    |
++---------------------------------------------------------+
+|  Priority Areas                                              |
+|  1. Explain your personal contribution more precisely        |
+|  2. Practice quantifying project outcomes                    |
+|  3. Review system-design fundamentals                        |
++---------------------------------------------------------+
+|  These are coaching recommendations, not guaranteed          |
+|  measurements.                                               |
++---------------------------------------------------------+
+|              [ Practice Again ]      [ Back to Agent ]       |
++---------------------------------------------------------+
+```
+
+### Empty / Loading / Error / Cancel States
+| State | Canvas behaviour |
+|---|---|
+| Between setup and first question | `task_progress` artifact ("Preparing your interview questions...") — reuses the existing Sprint 8 artifact type, no new one needed |
+| Answer submitted, feedback pending | `tool_started` event drives the existing `AgentActivityTrace` ("Answer Evaluator: reviewing response") — same mechanism as any other tool call |
+| Mid-session error (e.g. OpenRouter call fails) | Structured `error` event; session state is preserved client-side, so "Try Again" retries the same question without losing prior answers |
+| User navigates away mid-session | Session state is only held in the Agent Workspace's React state (matches the existing conversation-history precedent) — leaving the page ends the session; no "resume later" affordance in Sprint 9 MVP |
+| Cancel mid-session | A `[ Cancel Interview ]` control (visible during the Active Question State) discards the client-held session state immediately — no server call needed, since nothing was ever persisted server-side |
+
+### Mobile Layout
+The Active Question State and Feedback State render full-width in the existing mobile `[Results]` tab (see the Sprint 8 mobile pattern above); the answer `<textarea>` uses the same auto-resizing behavior already implemented for the Career Coach's input box.
+
+### Design Notes
+- No new page route. Everything above renders inside the existing Sprint 8 Artifact Canvas via 2 new artifact renderers (`InterviewFeedbackCard.tsx`, `InterviewReportCard.tsx`) plus an extension to the existing `InterviewQuestionCard.tsx`.
+- Uses the existing HireLens design system exclusively — same card/border/spacing tokens as `ATSScoreCard.tsx` and `ResumeDiffCard.tsx`.

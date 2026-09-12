@@ -44,17 +44,19 @@
 | Env variable | `OPENROUTER_API_KEY` (server-side only) | `ENVIRONMENT_VERIFICATION.md` §3 |
 
 ## Agent Orchestration
-**Confirmed for Sprint 8 (planned).** Per Project Rule 7, CrewAI is confirmed as still appropriate now that a dedicated sprint has been reached — see `20_Decision_Log.md`, ADR "CrewAI Deployment Boundary."
+**Delivered in Sprint 8, confirmed via Sprint 9 Day 1 audit.** Per Project Rule 7, CrewAI is confirmed live in production. One important correction versus the original Sprint 8 planning documentation: production request routing is a **deterministic keyword router**, not LLM-driven CrewAI hierarchical delegation — see the row below and `20_Decision_Log.md`'s Sprint 9 ADR "Ground Sprint 9 in the actual Manager routing mechanism."
 
 | Layer | Technology | Confirmed Via |
 |---|---|---|
-| Agent framework | CrewAI (Python) | `Sprint_08/Day_01.md` |
-| Hosting boundary | Standalone FastAPI microservice (`agent-service/`), deployed separately from the Vercel-hosted Next.js app (Railway/Render/Fly — final host chosen at implementation time based on cost; not a code-level dependency) | `Sprint_08/Day_01.md` Decision Log entry |
-| Inter-service auth | Next.js verifies the Firebase ID token, mints a short-lived internal JWT (`INTERNAL_AGENT_JWT_SECRET`, HS256, 60s expiry) carrying only `uid` + `iat`/`exp`; Python verifies that JWT on every request | `Sprint_08/Day_01.md` |
-| LLM provider (agents) | OpenRouter, same `google/gemini-2.5-flash` model as existing routes, called directly from Python via `httpx` (not proxied back through Node) | `Sprint_08/Day_02.md` |
+| Agent framework | CrewAI (Python) — `Agent`/`Crew`/`Task` objects are defined for all 7 roles (structural/tool-authorization purposes) | `agent-service/crew/agents/`, `agent-service/crew/manager.py` |
+| **Actual request routing (corrected)** | `agent-service/crew/manager.py`'s `process_manager_request_async` — a deterministic keyword-matched `if`/`elif` chain calling tool functions directly via `._run()`. `Crew.kickoff()` is defined (`get_career_crew()`) but has zero call sites anywhere in the codebase. | Sprint 9 Day 1 audit — confirmed via repository-wide search |
+| Hosting boundary | Standalone FastAPI microservice (`agent-service/`), deployed separately from the Vercel-hosted Next.js app | `Sprint_08/Day_01.md` |
+| Inter-service auth | Next.js verifies the Firebase ID token, mints a short-lived internal JWT (`INTERNAL_AGENT_JWT_SECRET`, HS256, 60s expiry) carrying only `uid`; Python verifies that JWT on every request | `Sprint_08/Day_01.md` |
+| LLM provider (agents) | OpenRouter, called directly from Python (`tools/openrouter_client.py`) with a structured-fallback path when no API key is configured | `Sprint_08/Day_02.md` |
 | Deterministic tool calls | Python tools call back into existing Next.js internal endpoints (`/api/internal/ats-score`, `/api/internal/jd-match`, `/api/ai-improve`, `/api/cover-letter`) — no scoring or optimization logic is reimplemented in Python | `Sprint_08/Day_03.md` |
-| Streaming transport | FastAPI `StreamingResponse` emitting newline-delimited JSON (NDJSON) agent events; Next.js proxy re-streams the same bytes via native `ReadableStream` (no new frontend dependency, consistent with the Sprint 6 streaming pattern) | `Sprint_08/Day_06.md` |
-| Cost/loop control | CrewAI `max_iter` per task, per-request wall-clock timeout enforced by the Next.js proxy's `AbortController`, and a Firestore-backed daily request counter per user (`users/{uid}/agentUsage/{date}`) | `Sprint_08/Day_09.md` |
+| Streaming transport | FastAPI `StreamingResponse` emitting NDJSON agent events via a per-request `EventBus`; Next.js proxy re-streams the same bytes via native `ReadableStream` | `Sprint_08/Day_06.md` |
+| Cost/loop control | Per-tool input clamps (e.g. question count `max(1, min(10, count))`), and a Firestore-transaction-backed daily request counter per user (`users/{uid}/agentUsage/{date}`, 50/day) | `Sprint_08/Day_09.md` |
+
 
 ## Deployment
 | Layer | Technology | Confirmed Via |
@@ -95,21 +97,32 @@
 | ATS context | `analyzeResume()` (deterministic, client-side) + `buildATSContextBlock()` | Sprint 6, Day 6 |
 | Conversation state | React `useState` — session-only, not persisted | Sprint 6 Decision Log |
 
-## Sprint 8 Additions (Planned)
+## Sprint 8 Additions (Delivered)
 
 ### New Backend Service
 | Layer | Technology | Confirmed Via |
 |---|---|---|
 | Framework | FastAPI (Python 3.11+) | `Sprint_08/Day_01.md` — first Python component in the repository |
-| Agent framework | CrewAI | `Sprint_08/Day_02.md` |
+| Agent framework | CrewAI (structural only — see Agent Orchestration section's routing correction above) | `Sprint_08/Day_02.md` |
 | HTTP client (tool → Next.js) | `httpx` (async) | `Sprint_08/Day_03.md` |
-| Validation | Pydantic v2 models for every tool input/output and the structured `AgentResponse` envelope | `Sprint_08/Day_03.md` |
-| Package/dependency management | `pip` + `requirements.txt` (or `uv`, confirmed at implementation time — no code-level impact either way) | `Sprint_08/Day_01.md` |
-| Testing | Pytest + `httpx.AsyncClient`, matching the convention already reserved in `08_Testing_Guide.md` | `Sprint_08/Day_10.md` |
+| Validation | Pydantic v2 models for tool inputs/outputs; `AgentResponse`/`Artifact` envelope is a looser `{id, type, title, data}` shape (closed-set enforcement happens on the frontend TypeScript switch, not a Python discriminated union) | `Sprint_08/Day_03.md`; confirmed via Sprint 9 Day 1 audit of `schemas/agent_response.py` |
+| Package/dependency management | `pip` + `requirements.txt` | `Sprint_08/Day_01.md` |
+| Testing | Pytest + `httpx.AsyncClient` | `Sprint_08/Day_10.md` |
 
 ### New Frontend Surfaces
 | Layer | Technology | Confirmed Via |
 |---|---|---|
-| Agent Workspace route | `app/dashboard/agent/page.tsx`, new default post-login redirect target | `Sprint_08/Day_07.md` |
-| Generative UI components | React components under `components/agent/` rendering a closed set of known artifact types only — the model never generates arbitrary executable UI | `Sprint_08/Day_08.md` |
-| New Firestore collection | `users/{uid}/agentUsage/{date}` — daily request-count document for cost control only; **no** persistent agent conversation memory is introduced | `Sprint_08/Day_09.md` Decision Log entry |
+| Agent Workspace route | `app/dashboard/agent/page.tsx`, default post-login redirect target | `Sprint_08/Day_07.md` |
+| Generative UI components | 8 typed renderers under `components/agent/artifacts/` (`ATSScoreCard`, `ResumeDiffCard`, `JobResultCard`, `SkillGapCard`, `CoverLetterPreview`, `InterviewQuestionCard`, `TaskProgress`, `ResumePreviewCard`), dispatched via `ArtifactRenderer.tsx`'s runtime-validated switch | `Sprint_08/Day_08.md` |
+| Firestore collection | `users/{uid}/agentUsage/{date}` — daily request-count document for cost control only (transaction-based, 50/day), the only new collection Sprint 8 introduced | `Sprint_08/Day_09.md` |
+
+## Sprint 9 Additions (Planned)
+
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Interview session lifecycle | New plain Python module `agent-service/crew/interview_manager.py` (not a CrewAI `Agent` — follows the `crew/workflows.py` precedent) | `Sprint_09/Day_02.md` |
+| Interview session state | Client-held, request-scoped JSON on a new `interview_session` field of the existing `ChatRequest` schema — no new Firestore collection | `Sprint_09/Day_02.md` Decision Log entry |
+| New tools | `generate_follow_up_question`, `generate_interview_report` (added to `interview_tools.py`, sharing the existing `INTERVIEW_GUARDRAIL` constant); `prepare_interview_questions` extended with `interview_type`/`difficulty` params | `Sprint_09/Day_03.md`–`Day_04.md` |
+| New artifact types | `interview_feedback_card`, `interview_report_card` (10 total artifact types after Sprint 9); `interview_question_card` extended with optional session/active-question fields | `Sprint_09/Day_07.md` |
+| Streaming events | Zero new event types — interview moments reuse the existing 9 `AgentEvent` types | `Sprint_09/Day_02.md` Decision Log entry |
+| New UI | Answer input + Submit wired into `InterviewQuestionCard.tsx`; new `InterviewFeedbackCard.tsx`, `InterviewReportCard.tsx` | `Sprint_09/Day_07.md` |

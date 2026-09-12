@@ -234,3 +234,44 @@
 **Impact:** A user could exceed the intended daily ceiling by a small margin under concurrent load.
 **Mitigation:** Firestore atomic increment (`FieldValue.increment(1)`) used instead of read-then-write, eliminating the race at the database level. Documented as a deliberate simplicity choice over a distributed lock, since the ceiling is a cost-control soft limit, not a hard security boundary.
 **Priority:** Low
+
+---
+
+## Sprint 9 Specific Risks
+
+### Interview Coach Fabricates Candidate Qualifications — Extended Surface
+**Description:** Sprint 8 already identified this risk for `prepare_interview_questions`/`evaluate_interview_answer`. Sprint 9 adds two more generation points (`generate_follow_up_question`, `generate_interview_report`) where the same failure mode — implying the candidate has unverified experience — could newly appear, particularly in a report's "strengths" section if the model over-generalizes from one good answer to a broader claimed competency.
+**Impact:** Same as Sprint 8's original entry — misleading self-assessment; a candidate could misrepresent themselves in a real interview based on false confidence from a HireLens report.
+**Mitigation:** All four interview tools share the single `INTERVIEW_GUARDRAIL` constant (see `20_Decision_Log.md`, "Anti-fabrication guardrail is extended in place, not duplicated"); the report generator's prompt additionally requires explicitly flagging insufficient evidence rather than omitting or guessing. Tested via `test_interview_anti_fabrication.py` and manual QA TEST L.
+**Priority:** Critical
+
+### Interview Session State Tampering by the Client
+**Description:** Because `InterviewSessionState` is held and sent by the client (per the Day 1/2 architecture decision), a technically sophisticated user could edit the payload before sending it — e.g., inflate `questionIndex` to skip to "completed," or submit a fabricated `answersGiven` history to get a report without actually answering questions.
+**Impact:** The user only defeats their own practice tool. No other user's data, the deterministic ATS score, or any billing/authorization boundary is affected — this is categorically different from the Sprint 8 "Cross-Service Authentication Bypass" risk, which involved cross-user exposure.
+**Mitigation:** Explicitly accepted, not engineered around, for Sprint 9 MVP — documented here so it is a deliberate decision rather than an unnoticed gap. If a future sprint introduces persistent, graded, or shareable interview reports (e.g., for a coach/mentor to review), this tradeoff must be revisited with server-side session validation.
+**Day 9 Confirmation Note (2026-09-12):** Re-reviewed line-by-line during Sprint 9 Day 9 adversarial hardening. Defensive clamping added to `interview_manager.py` ensures negative `question_index` cannot bypass completion checks, oversized `questions_asked` payloads (>15) are strictly capped, and follow-up chains cannot exceed 1. Confirmed: all session state remains strictly ephemeral per-request; no shared cache, persistent storage, or cross-request side effects exist. Blast radius remains strictly self-limiting to the tampering user's active session.
+**Priority:** Low (self-limiting blast radius)
+
+### Numeric Score Creep
+**Description:** A future contributor, or an over-eager prompt tweak, could reintroduce a numeric "interview score" into the report or feedback artifacts — reversing the Sprint 9 Decision Log's explicit "no numeric interview score" ADR — without realizing it recreates the ATS-confusion risk the brief specifically warns against.
+**Impact:** Users could conflate a model-generated interview impression number with the deterministic, authoritative ATS score, undermining trust in the ATS score's objectivity.
+**Mitigation:** `InterviewReportArtifactData`'s TypeScript/Pydantic schemas contain no numeric score field at all — enforced structurally, not just by prompt instruction, and asserted by `test_interview_report_no_score.py`. Any future PR adding a numeric field to this schema will fail that test, forcing an explicit, reviewed decision rather than a silent reintroduction.
+**Priority:** Medium (structural guard in place; documented for future maintainers)
+
+### `evaluate_interview_answer` Reachability Regression
+**Description:** Sprint 9's core deliverable is making an already-built, already-tested tool actually reachable. There is a specific risk that Sprint 9's new routing logic could accidentally reintroduce the same class of bug — e.g., wiring the tool into `interview_manager.py` correctly but failing to actually call `interview_manager.process_answer()` from `manager.py`'s router, leaving the capability silently unreachable a second time.
+**Impact:** The Sprint's primary stated goal fails silently — the product would appear to support mock interviews (setup UI, question display) but answer submission would still not work, exactly reproducing the Sprint 8 gap this Sprint exists to close.
+**Mitigation:** Manual QA TEST H (complete a full mock interview session) and TEST N (observe the full event sequence) are both end-to-end checks that specifically exercise the answer-submission path through the real UI, not just a unit test of the tool in isolation — closing the exact blind spot that let this gap ship undetected in Sprint 8.
+**Priority:** Critical — this is the single most important thing to verify before Sprint 9 close-out
+
+### Adaptive Follow-Up Loop
+**Description:** A poorly-tuned adaptive follow-up rule could generate a follow-up to a follow-up indefinitely if the candidate's answers remain ambiguous.
+**Impact:** A session that never progresses past one question, frustrating the user and consuming unnecessary OpenRouter calls/daily rate-limit budget.
+**Mitigation:** `MAX_FOLLOW_UPS_PER_QUESTION = 1` hard ceiling in `interview_manager.py` — after one follow-up, the session always advances to the next planned question regardless of answer quality. Tested in `test_interview_session.py`.
+**Priority:** Medium
+
+### Documentation-Reality Drift Recurrence
+**Description:** Sprint 9's own Day 1 finding was that Sprint 8's documentation described an execution model (LLM-driven hierarchical delegation) that diverged from what was actually shipped (a deterministic router). The same drift could recur for Sprint 9 if `Sprint_09/Day_10.md`'s close-out isn't grounded in the actual final code the same way this planning document tried to be grounded in Sprint 8's actual code.
+**Impact:** Sprint 10 would inherit the same kind of inaccurate "existing state" baseline Sprint 9 had to correct for Sprint 8, compounding the problem sprint over sprint.
+**Mitigation:** `Sprint_09/Day_10.md`'s close-out checklist explicitly requires verifying the final implementation against this planning document and logging any deltas in `20_Decision_Log.md` — the same discipline this document's own Sprint 8 audit modeled.
+**Priority:** Medium (process risk, not a code risk)

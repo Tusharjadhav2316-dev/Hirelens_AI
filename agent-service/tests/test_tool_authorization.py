@@ -48,7 +48,11 @@ def test_job_search_agent_tools():
     assert job_search_agent.max_iter == 6
 
 def test_interview_coach_agent_tools():
-    assert get_tool_names(interview_coach_agent) == ["evaluate_interview_answer", "prepare_interview_questions"]
+    assert get_tool_names(interview_coach_agent) == [
+        "evaluate_interview_answer",
+        "generate_interview_report",
+        "prepare_interview_questions",
+    ]
     assert interview_coach_agent.allow_delegation is False
     assert interview_coach_agent.max_iter == 6
 

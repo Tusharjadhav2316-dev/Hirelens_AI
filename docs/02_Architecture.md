@@ -425,3 +425,171 @@ This is the literal mechanism behind the non-negotiable "the agent must never si
 
 ### Existing Features — Explicitly Unmodified
 Resume Builder, ATS Analyzer, Resume Optimizer forms, Cover Letter page, standalone Career Coach page, Firebase Auth, Firestore history/profile, and all three existing test suites (`atsBenchmark`, `optimizerSafety`, `careerCoachSafety`) continue to run exactly as before Sprint 8. Sprint 8 adds a new default landing route and new internal endpoints; it does not touch the code paths behind any existing Sidebar entry.
+
+---
+
+## Sprint 9 Architecture — AI Interview Coach: Mock Interview Sessions, Adaptive Follow-Up & Feedback
+
+> Planning-stage architecture. Builds directly on the Sprint 8 architecture above, corrected against the actual delivered system per `20_Decision_Log.md`'s Sprint 9 audit ADRs — see especially the routing-mechanism correction. Implementation detail lives in `Sprint_09/Day_01.md` through `Day_10.md`.
+
+### What Sprint 8 Already Delivered (Existing — Not Rebuilt)
+| Capability | Status | Location |
+|---|---|---|
+| `prepare_interview_questions` tool | Working, tested, reachable via Route 4 | `agent-service/tools/interview_tools.py` |
+| `evaluate_interview_answer` tool | Working, tested, **but unreachable** — no route calls it | `agent-service/tools/interview_tools.py` |
+| `interview_coach_agent` (CrewAI Agent object) | Defined, tool-authorized, not delegated to via `kickoff()` (see routing correction) | `agent-service/crew/agents/interview_coach_agent.py` |
+| `INTERVIEW_GUARDRAIL` anti-fabrication prompt text | Working, covers resume-fact-vs-JD-requirement distinction and no-verdicts rule | `agent-service/tools/interview_tools.py` |
+| `interview_question_card` artifact + `InterviewQuestionCard.tsx` | Renders a static list of questions with expandable tips only | `frontend/types/agent.ts`, `frontend/components/agent/artifacts/InterviewQuestionCard.tsx` |
+| Route 4 (`"interview"`/`"mock"`/`"questions"`/`"prep"` keywords) | Generates 5 hardcoded-role questions once; no session, no answer path | `agent-service/crew/manager.py` |
+
+### Sprint 9 Target Data Flow
+```
+User: "Prepare me for a technical interview" (or continues an in-progress session)
+  -> POST /api/agent/chat { messages, resume, job_description?, interview_session? }
+  -> Next.js proxy: verifyAuth, mint internal JWT, forward (UNCHANGED from Sprint 8)
+  -> agent-service /chat -> process_manager_request_async
+       IF no interview_session in payload AND message matches interview-start intent:
+           -> interview_manager.start_session(role, jd, resume, interview_type, difficulty, count)
+                -> tool: prepare_interview_questions(interview_type, difficulty, resume_text, job_description)
+                -> returns InterviewSessionState with question_index=0
+                -> emits artifact: interview_question_card (isActive=true, question[0])
+       IF interview_session present AND payload contains a pendingAnswer for the active question:
+           -> interview_manager.process_answer(session, pendingAnswer)
+                -> tool: evaluate_interview_answer(question, answer, resume_text)
+                -> emits artifact: interview_feedback_card
+                -> interview_manager decides: adaptive follow-up vs. next planned question
+                     IF follow-up warranted -> tool: generate_follow_up_question(...)
+                     ELSE -> advance question_index, present next question from the plan
+                -> IF question_index >= total -> interview_manager.complete_session(session)
+                     -> tool: generate_interview_report(session)
+                     -> emits artifact: interview_report_card
+                -> ELSE emits artifact: interview_question_card (isActive=true, next question)
+       -> updated InterviewSessionState returned to client in the response payload (client is the only place it's stored)
+  -> Agent Workspace renders the new/updated artifact; user answers or reviews the report
+```
+
+### Interview Manager — Not a New Agent
+Per `20_Decision_Log.md`, `agent-service/crew/interview_manager.py` is a plain Python module, not a CrewAI `Agent`. Total agent count remains **7** (1 Manager + 6 specialized: Resume, ATS, Optimizer, Career, Job Search, Interview Coach) — unchanged from Sprint 8. `interview_coach_agent`'s tool list grows from 2 to 4 tools.
+
+### Sprint 9 Tool Contracts (2 new; 2 existing extended)
+```python
+# interview_tools.py (existing file, extended)
+
+@tool("prepare_interview_questions")
+def prepare_interview_questions(
+    role: str = "Software Engineer",
+    count: int = 5,
+    resume_text: Optional[str] = None,
+    job_description: Optional[str] = None,
+    interview_type: Literal["hr", "behavioral", "technical", "mixed"] = "mixed",   # NEW param
+    difficulty: Literal["beginner", "intermediate", "advanced"] = "intermediate",   # NEW param
+) -> str:
+    """Existing tool, extended with interview_type/difficulty. Signature is backward compatible -
+    both new params have defaults, so Sprint 8's Route 4 call site continues to work unchanged."""
+
+@tool("evaluate_interview_answer")
+def evaluate_interview_answer(question: str, answer: str, resume_text: Optional[str] = None) -> str:
+    """UNCHANGED from Sprint 8. Sprint 9's only job here is to make this tool REACHABLE
+    by wiring it into interview_manager.process_answer(). No signature or behavior change."""
+
+@tool("generate_follow_up_question")
+def generate_follow_up_question(
+    original_question: str,
+    candidate_answer: str,
+    identified_gap: str,          # e.g. "unclear personal technical contribution"
+    resume_text: Optional[str] = None,
+) -> str:
+    """NEW. Generates one targeted follow-up question addressing a specific gap identified
+    in evaluate_interview_answer's feedback. Shares INTERVIEW_GUARDRAIL. Never asks about
+    a gap the resume/JD doesn't support investigating."""
+
+@tool("generate_interview_report")
+def generate_interview_report(session: InterviewSessionState) -> str:
+    """NEW. Summarizes a completed session: per-category readiness (qualitative labels only,
+    see 20_Decision_Log.md's 'no numeric interview score' ADR), strengths, improvement areas,
+    and recommended practice topics. Explicitly flags any area with insufficient resume/JD
+    evidence rather than guessing."""
+```
+
+### New Artifact Types
+```typescript
+// Extends the existing 8-type closed union to 10 types
+export interface InterviewQuestionItem {
+  id: string;
+  question: string;
+  category?: string;
+  difficulty?: "Easy" | "Medium" | "Hard" | string;
+  keyTips?: string[];
+  // NEW, optional - only present when part of an active session:
+  isActive?: boolean;
+  sessionId?: string;
+  questionIndex?: number;
+  totalQuestions?: number;
+}
+// InterviewQuestionArtifactData is unchanged in shape (still { questions: InterviewQuestionItem[] });
+// a single-item array with isActive=true represents "the current question awaiting an answer."
+
+export interface InterviewFeedbackArtifactData {
+  question: string;
+  answer: string;
+  clarity: string;
+  structure: string;
+  specificity: string;
+  technical_depth: string;
+  strengths: string[];
+  improvements: string[];
+  suggested_answer_direction: string;
+}
+export type InterviewFeedbackArtifact = { id?: string; title?: string; type: "interview_feedback_card"; data: InterviewFeedbackArtifactData };
+
+export interface InterviewReportArtifactData {
+  interviewType: string;
+  targetRole: string;
+  questionsAsked: number;
+  readinessByCategory: Record<string, "Strong" | "Moderate" | "Needs Improvement">;  // qualitative only
+  strengths: string[];
+  improvementAreas: string[];
+  priorityTopics: string[];
+  note: string;   // "These are coaching recommendations, not guaranteed measurements."
+}
+export type InterviewReportArtifact = { id?: string; title?: string; type: "interview_report_card"; data: InterviewReportArtifactData };
+```
+
+### Interview Session State (Request-Scoped, Client-Held)
+```typescript
+export interface InterviewSessionState {
+  sessionId: string;
+  interviewType: "hr" | "behavioral" | "technical" | "mixed";
+  targetRole: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  questionIndex: number;
+  questionsAsked: InterviewQuestionItem[];
+  answersGiven: { questionId: string; answer: string; feedback: InterviewFeedbackArtifactData }[];
+  status: "in_progress" | "completed";
+}
+```
+Sent as a new optional `interview_session` field on `AgentStreamPayload` (alongside the existing `resume`, `attachments`). Never written to Firestore; never read by any tool except via this per-request payload. See `20_Decision_Log.md` for the full rationale and the explicit rejection of a persistent `interviewSessions` collection for Sprint 9 MVP.
+
+### Adaptive Follow-Up Decision Rule (Transparent, Not Hidden ML)
+```
+after evaluate_interview_answer returns feedback:
+  IF len(feedback.improvements) >= 2 AND "unclear" or "specific" appears in feedback text:
+      -> generate ONE follow-up question targeting the clearest gap, difficulty unchanged
+  ELSE IF feedback indicates a strong answer (few/no improvements, resume-grounded specifics present):
+      -> advance to next planned question, difficulty steps up one level (beginner->intermediate->advanced, capped)
+  ELSE:
+      -> advance to next planned question, difficulty unchanged
+```
+This rule is implemented as plain Python conditionals in `interview_manager.py`, not a separate scoring model — documented here in full so its behavior is auditable, per the brief's "avoid arbitrary score manipulation... document the exact behavior" requirement.
+
+### Streaming — No New Event Types
+Interview session moments reuse the existing 9 `AgentEvent` types exactly as delivered in Sprint 8 (`agent_started`, `agent_completed`, `tool_started`, `tool_completed`, `message_delta`, `artifact`, `action_required`, `error`, `completed`). See `20_Decision_Log.md`'s "No new streaming event types" ADR for the full mapping from the brief's suggested interview-specific event names onto this existing vocabulary.
+
+### Security — Extends Sprint 8's Model Unchanged
+- **Cross-user session access:** impossible by construction — there is no server-side session lookup by ID for another user to guess; the only copy of a session's state is in the requesting user's own already-authenticated browser session and request body.
+- **Malicious answer content:** candidate answers are treated as DATA inside the evaluation prompt, never concatenated as instructions — same pattern as resume/JD handling throughout Sprint 8.
+- **Session state tampering:** since the client holds the canonical session copy, a malicious client could in principle submit a fabricated `questionsAsked`/`answersGiven` history. This has no security consequence (no other user's data is reachable this way, and the worst case is a candidate lying to their own practice tool) but is documented explicitly in `26_Risks.md` for completeness.
+- **Cost/loop bounds:** new `MAX_QUESTIONS_PER_SESSION` (15, matching the brief's suggested ceiling) and `MAX_FOLLOW_UPS_PER_QUESTION` (1, preventing an infinite adaptive-follow-up chain) constants in `interview_manager.py`, on top of Sprint 8's existing daily `agentUsage` counter (each turn of a session is still one `/api/agent/chat` call, so long sessions are naturally rate-limited too).
+
+### Existing Features — Explicitly Unmodified
+Resume Builder, ATS Analyzer, Resume Optimizer, Cover Letter, Career Coach, Job Search, the Agent Workspace shell, all 7 existing agents' other tool paths, and the full Sprint 8 test suite continue to run exactly as before Sprint 9. Sprint 9 only extends `interview_tools.py`, adds `interview_manager.py`, extends Route 4, and adds/extends the interview-specific frontend artifacts.

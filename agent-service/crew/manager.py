@@ -32,6 +32,8 @@ from crew.agents.interview_coach_agent import interview_coach_agent
 from crew.workflows import detect_compound_intent, run_application_workflow_async, run_application_workflow
 from crew.grounded_resume import generate_grounded_structured_resume
 from crew.event_bus import EventBus
+from crew import interview_manager
+from schemas.interview_session import InterviewSessionState
 
 manager = Agent(
     role="HireLens Career Agent Manager",
@@ -87,7 +89,8 @@ async def process_manager_request_async(
     job_description: Optional[str] = None,
     attachments: Optional[List[Dict[str, Any]]] = None,
     internal_jwt: Optional[str] = None,
-    bus: Optional[EventBus] = None
+    bus: Optional[EventBus] = None,
+    interview_session: Optional[InterviewSessionState] = None
 ) -> Dict[str, Any]:
     """
     Asynchronous Manager entry point.
@@ -117,6 +120,7 @@ async def process_manager_request_async(
 
     has_jd = bool(effective_jd and effective_jd.strip())
     clean = (message or "").lower().strip()
+    has_active_interview_session = interview_session is not None and interview_session.status == "in_progress"
 
     # Special check: Resume building from scratch / reference document request
     if ("build" in clean or "create" in clean) and ("resume" in clean):
@@ -379,55 +383,181 @@ async def process_manager_request_async(
                 await bus.push_end()
             return {"status": "failed", "error": err_msg}
 
-    # Route 4: Mock Interview Question Preparation
-    elif "interview" in clean or "mock" in clean or "questions" in clean or "prep" in clean:
+    # Route 4: Mock Interview Session & Coaching (Sub-Router 4a/4b/4c)
+    elif "interview" in clean or "mock" in clean or "questions" in clean or "prep" in clean or has_active_interview_session:
         target_agent = "interview_coach_agent"
-        tool_name = "prepare_interview_questions"
 
         if bus:
             await bus.push({"type": "agent_started", "agent": "manager"})
             await bus.push({"type": "agent_started", "agent": target_agent})
-            await bus.push({"type": "tool_started", "agent": target_agent, "tool": tool_name})
 
         try:
-            q_res = prepare_interview_questions._run(
-                role="Software Engineer",
-                count=5,
-                resume_text=effective_resume,
-                job_description=effective_jd
-            )
-            q_data = json.loads(q_res) if isinstance(q_res, str) else q_res
-            if bus:
-                await bus.push({"type": "tool_completed", "agent": target_agent, "tool": tool_name})
+            if interview_session is None:
+                # Route 4a: Start a new interview session
+                tool_name = "prepare_interview_questions"
+                if bus:
+                    await bus.push({"type": "tool_started", "agent": target_agent, "tool": tool_name})
 
-            questions_list = []
-            if isinstance(q_data, list):
-                questions_list = q_data
-            elif isinstance(q_data, dict):
-                questions_list = q_data.get("questions", [])
+                detected_type = interview_manager.detect_interview_type(clean)
+                detected_role = interview_manager.detect_target_role(clean, effective_resume)
+                session = interview_manager.start_session(
+                    interview_type=detected_type,
+                    target_role=detected_role,
+                    difficulty="intermediate",
+                    resume_text=effective_resume,
+                    job_description=effective_jd,
+                    attachments=attachments
+                )
+                pres = interview_manager.present_question(
+                    session=session,
+                    resume_text=effective_resume,
+                    job_description=effective_jd
+                )
+                active_q = pres.get("active_question")
 
-            art = {
-                "type": "interview_question_card",
-                "status": "completed",
-                "data": {
-                    "questions": questions_list
+                if bus:
+                    await bus.push({"type": "tool_completed", "agent": target_agent, "tool": tool_name})
+
+                art = {
+                    "type": "interview_question_card",
+                    "status": "completed",
+                    "data": {
+                        "questions": [q.model_dump() for q in session.questions_asked],
+                        "session": session.model_dump(),
+                        "active_question": active_q.model_dump() if active_q else None
+                    }
                 }
-            }
-            msg_text = "I've generated 5 tailored mock interview questions based on your background and target role. Check the Interview Questions artifact to review key tips and practice your answers."
+                msg_text = f"I've started your {session.interview_type} mock interview for the {session.target_role} role (Difficulty: {session.difficulty.capitalize()}).\n\n**Question 1**: {active_q.question if active_q else ''}\n\nTake your time to type your response below."
 
-            if bus:
-                await bus.push({"type": "artifact", "artifact": art})
-                await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
-                await bus.push({"type": "agent_completed", "agent": target_agent})
-                await bus.push({"type": "agent_completed", "agent": "manager"})
-                await bus.push({"type": "completed"})
-                await bus.push_end()
+                if bus:
+                    await bus.push({"type": "artifact", "artifact": art})
+                    await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
+                    await bus.push({"type": "agent_completed", "agent": target_agent})
+                    await bus.push({"type": "agent_completed", "agent": "manager"})
+                    await bus.push({"type": "completed"})
+                    await bus.push_end()
 
-            return {"status": "single_intent_delegation", "artifacts": [art]}
+                return {
+                    "status": "single_intent_delegation",
+                    "message": msg_text,
+                    "artifacts": [art],
+                    "interview_session": session.model_dump()
+                }
+
+            elif message and len(message.strip()) > 0 and not any(k in clean for k in ["start", "restart", "new interview"]):
+                # Route 4b: Process a submitted candidate answer
+                tool_name = "evaluate_interview_answer"
+                if bus:
+                    await bus.push({"type": "tool_started", "agent": target_agent, "tool": tool_name})
+
+                proc_res = interview_manager.process_answer(
+                    session=interview_session,
+                    answer=message.strip(),
+                    resume_text=effective_resume,
+                    job_description=effective_jd
+                )
+                session = proc_res["session"]
+                feedback = proc_res["feedback"]
+                next_q = proc_res.get("next_question")
+                is_follow_up = proc_res.get("is_follow_up", False)
+
+                if bus:
+                    await bus.push({"type": "tool_completed", "agent": target_agent, "tool": tool_name})
+
+                feedback_art = {
+                    "type": "interview_feedback_card",
+                    "status": "completed",
+                    "data": feedback if isinstance(feedback, dict) else {"raw_feedback": str(feedback)}
+                }
+
+                if session.status == "completed":
+                    if bus:
+                        await bus.push({"type": "tool_started", "agent": target_agent, "tool": "generate_interview_report"})
+                    report_data = proc_res.get("report")
+                    if not report_data:
+                        _, report_data = interview_manager.complete_session(session)
+                    if bus:
+                        await bus.push({"type": "tool_completed", "agent": target_agent, "tool": "generate_interview_report"})
+
+                    report_art = {
+                        "type": "interview_report_card",
+                        "status": "completed",
+                        "data": report_data
+                    }
+                    artifacts_list = [feedback_art, report_art]
+                    msg_text = "Great job! You have completed all questions in this mock interview session. Review your overall feedback and qualitative report in the Artifact Canvas."
+                else:
+                    question_art = {
+                        "type": "interview_question_card",
+                        "status": "completed",
+                        "data": {
+                            "questions": [q.model_dump() for q in session.questions_asked],
+                            "session": session.model_dump(),
+                            "active_question": next_q.model_dump() if next_q else None,
+                            "latest_feedback": feedback,
+                            "is_follow_up": is_follow_up
+                        }
+                    }
+                    artifacts_list = [feedback_art, question_art]
+                    if is_follow_up:
+                        msg_text = f"Thanks for your response! Let's dive a bit deeper:\n\n**Follow-Up Question**: {next_q.question if next_q else ''}"
+                    else:
+                        msg_text = f"Feedback evaluated (Difficulty is now {session.difficulty.capitalize()}).\n\n**Next Question**: {next_q.question if next_q else ''}"
+
+                if bus:
+                    for a_item in artifacts_list:
+                        await bus.push({"type": "artifact", "artifact": a_item})
+                    await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
+                    await bus.push({"type": "agent_completed", "agent": target_agent})
+                    await bus.push({"type": "agent_completed", "agent": "manager"})
+                    await bus.push({"type": "completed"})
+                    await bus.push_end()
+
+                return {
+                    "status": "single_intent_delegation",
+                    "message": msg_text,
+                    "artifacts": artifacts_list,
+                    "interview_session": session.model_dump()
+                }
+
+            else:
+                # Route 4c: Session exists, re-present active question (idempotent)
+                pres = interview_manager.present_question(
+                    session=interview_session,
+                    resume_text=effective_resume,
+                    job_description=effective_jd
+                )
+                active_q = pres.get("active_question")
+
+                art = {
+                    "type": "interview_question_card",
+                    "status": "completed",
+                    "data": {
+                        "questions": [q.model_dump() for q in interview_session.questions_asked],
+                        "session": interview_session.model_dump(),
+                        "active_question": active_q.model_dump() if active_q else None
+                    }
+                }
+                msg_text = f"Continuing your mock interview session.\n\n**Active Question**: {active_q.question if active_q else ''}"
+
+                if bus:
+                    await bus.push({"type": "artifact", "artifact": art})
+                    await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
+                    await bus.push({"type": "agent_completed", "agent": target_agent})
+                    await bus.push({"type": "agent_completed", "agent": "manager"})
+                    await bus.push({"type": "completed"})
+                    await bus.push_end()
+
+                return {
+                    "status": "single_intent_delegation",
+                    "message": msg_text,
+                    "artifacts": [art],
+                    "interview_session": interview_session.model_dump()
+                }
+
         except Exception as e:
             err_msg = f"Interview prep tool error: {str(e)}"
             if bus:
-                await bus.push({"type": "tool_completed", "agent": target_agent, "tool": tool_name})
                 await bus.push({"type": "error", "message": err_msg})
                 await bus.push({"type": "agent_completed", "agent": target_agent})
                 await bus.push({"type": "agent_completed", "agent": "manager"})

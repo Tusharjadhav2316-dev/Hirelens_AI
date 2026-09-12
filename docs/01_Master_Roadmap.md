@@ -13,6 +13,15 @@ This is a **deliberate, logged amendment** to the "locked sequence" rule above, 
 
 The table below reflects this amendment.
 
+## ⚠️ Sprint 9 Reactivation (Roadmap Amendment)
+
+Sprint 8's close-out (below) correctly retired the "Sprint 9" title, since Sprint 8 delivered a working baseline Interview Coach (`prepare_interview_questions` + `evaluate_interview_answer`, single-shot, no session). The product owner has since issued a new, explicit directive re-activating the Sprint 9 slot for a **deepening** of that capability — not a repeat of Sprint 8's work. Per repository audit (`Sprint_09/Day_01.md`), the Sprint 8 baseline has three concrete gaps this Sprint 9 exists to close:
+1. `evaluate_interview_answer` is a fully-implemented, tested tool, but **no code path in `agent-service/crew/manager.py` ever calls it** — a candidate can receive questions but has no way to submit an answer and receive feedback today.
+2. There is no interview **session** concept anywhere (no question index, no running Q&A history, no adaptive follow-up, no completion/report) — each interview-related request is independent and stateless.
+3. `InterviewQuestionCard.tsx` only renders a static list of questions with expandable tips — there is no answer input, no submit action, no feedback display, and no progress/report UI.
+
+This re-activation is logged the same way the Sprint 8 Scope Directive was logged (Project Rule 9 — no silent scope creep): see `20_Decision_Log.md`, ADR "Sprint 9 Reactivation." Sprint 9 is scoped narrowly to closing these three gaps plus the mock-interview/adaptive-follow-up/report capabilities the original brief always intended for this title — it does not redo anything Sprint 8 already delivered correctly.
+
 ## Sprint Overview
 
 | # | Title | Est. Days | Difficulty | Status |
@@ -25,7 +34,7 @@ The table below reflects this amendment.
 | 6 | AI Career Coach | 8 | Hard | ✅ Complete |
 | 7 | Job Search & Application Tracker | 7 | Medium-Hard | ⚠️ Partially Superseded — job search delivered in Sprint 8; application tracker remains ⬜ Not Started |
 | 8 | CrewAI Multi-Agent System & AI-First Agent Workspace | 10 | Hard | ✅ Complete |
-| 9 | AI Interview Coach | 7 | Medium-Hard | ⚠️ Superseded — delivered inside Sprint 8 as the Interview Coach Agent |
+| 9 | AI Interview Coach — Mock Interview Sessions, Adaptive Follow-Up & Feedback | 10 | Hard | ✅ Complete |
 | 10 | Career Roadmap & Learning Engine | 6 | Medium | ⬜ Not Started |
 | 11 | Premium UI/UX Redesign | 8 | Medium-Hard | ⬜ Not Started |
 | 12 | Premium SaaS Features & Payments | 7 | Hard | ⬜ Not Started |
@@ -54,15 +63,18 @@ The table below reflects this amendment.
 ### Sprint 6 — AI Career Coach ✅ Complete
 **Actual Outcome:** Built an authenticated conversational Career Coach (`/dashboard/career-coach`) with real-time SSE token streaming via Next.js serverless route (`/api/career-coach`). Grounded the Coach across 3 intelligence layers: candidate resume (`buildResumeContextBlock`), deterministic ATS analysis (`buildATSContextBlock` from `analyzeResume`), and target job description context (`buildJDContextBlock`). Enforced non-negotiable truth-preservation guardrails (`CAREER_COACH_SYSTEM_PROMPT`). Created pure helper module `lib/careerCoachService.ts`, client UI shell with starter prompts, context status indicator bar, context inspector panel, input clamping, auto-resizing textarea, 8-turn context window trimming warning, and comprehensive safety test suite `tests/careerCoachSafety.test.ts` (34 automated assertions + 5 manual QA cases passed 100%).
 
-### Sprint 8 — CrewAI Multi-Agent System & AI-First Agent Workspace ✅ Complete
-**Actual Outcome:** Delivered a full 10-day architectural transformation into an AI Career Operating System. Built Python/FastAPI `agent-service/` featuring a Manager Agent + 6 specialized domain agents (Resume, ATS, Job Search, Cover Letter, Skill Gap, Interview Coach) using CrewAI and 9 typed tools. Connected Next.js frontend to Python backend via authenticated streaming proxy (`/api/agent/chat`) with internal JWT verification (`verifyInternalJwt.ts`) and atomic server-side daily rate limiting (`agentUsageService.ts` with 50 req/day cap). Built internal Next.js bridge endpoints (`/api/internal/ats-score` & `/api/internal/jd-match`) ensuring single-source-of-truth preservation for deterministic ATS calculations. Created default post-login desktop split-pane Agent Workspace (`/dashboard/agent`) featuring live activity trace checklist (`AgentActivityTrace.tsx`), quick-action chip pre-filling (`ConversationPane.tsx`), and Generative UI Artifact Canvas (`ArtifactCanvas.tsx` & `ArtifactRenderer.tsx`) with 7 dedicated typed renderers (`ATSScoreCard`, `ResumeDiffCard`, `JobResultCard`, `SkillGapCard`, `CoverLetterPreview`, `InterviewQuestionCard`, `TaskProgress`). Enforced client-side-only `ResumeDiffCard` Apply/Reject mutations via `ResumeContext`. Verified 100% pass across 46 Python pytest cases, 11 TypeScript test suites, zero Next.js build errors, and manual QA cases C1–C8.
+---
+
+### Sprint 9 — AI Interview Coach: Mock Interview Sessions, Adaptive Follow-Up & Feedback ✅ Complete
+**Actual Outcome:** Delivered interactive mock interview coach and evaluation engine across a complete 10-day lifecycle. Wired `evaluate_interview_answer` tool into live Manager Agent sub-routing (`manager.py` Route 4b), eliminating the Sprint 8 reachability gap. Built client-held, request-scoped interview session state (`InterviewSessionState`, snake_case Python schemas, camelCase TypeScript frontend) without requiring persistent Firestore database changes. Implemented `agent-service/crew/interview_manager.py` with multi-tier context resolution (direct fields + PDF/TXT attachment fallback), adaptive follow-up decision rules (`MAX_FOLLOW_UPS_PER_QUESTION = 1`), adaptive difficulty stepping (`beginner` -> `intermediate` -> `advanced`), and session completion capping (`MAX_QUESTIONS_PER_SESSION = 15`). Extended generative UI Artifact Canvas with `InterviewFeedbackCard.tsx` and `InterviewReportCard.tsx`, completing the closed 10-type Artifact union. Enforced zero-numeric-score and non-fabrication constraints (`InterviewReportArtifactData` with `extra="forbid"`). Hardened against prompt injection and session-state tampering with 101/101 automated Python tests passing and 0 TypeScript build errors.
+**See:** `Sprint_09/Day_01.md` through `Day_10.md`
 
 ---
 
-## Active Sprint
+## Next Sprint (Upcoming)
 
-### Sprint 8 — CrewAI Multi-Agent System & AI-First Agent Workspace 🟦 Planned — 0% Progress
-**Goal:** Introduce a Python/FastAPI + CrewAI agent-orchestration service, fronted by an authenticated Next.js proxy, and make the resulting **AI Career Agent** the primary post-login experience. The agent orchestrates all existing HireLens capabilities (Resume Builder/Optimizer, deterministic ATS Engine, Cover Letter, Career Coach persona) plus two new capabilities pulled forward from Sprints 7 and 9 (Job Search, Interview Prep) via typed tools — it never re-implements or bypasses them. See `Sprint_08/Day_01.md` through `Day_10.md` for full implementation detail, and the **Sprint 8 Scope Directive** above for why Job Search and Interview Coach appear here instead of their originally-numbered sprints.
+### Sprint 10 — Career Roadmap & Learning Engine ⬜ Not Started
+Skill gap analysis extended into a personalized learning path generator. Identifies missing skills against a target role, maps them to recommended resources (courses, projects, certifications), and generates a chronological study plan. Architecture: extends existing `jdMatcher.ts` skill-gap detection; learning resource suggestions via AI prompting (no external learning API dependency by default — can be added if a suitable free tier is identified).
 
 ---
 
@@ -71,14 +83,14 @@ The table below reflects this amendment.
 ### Sprint 7 — Job Search & Application Tracker (Partially Superseded)
 Originally scoped as job search integration + an application pipeline tracker. **Job search is now delivered in Sprint 8** (Job Search Agent + provider-abstracted `JobSearchTool`). The **application pipeline tracker** (Firestore-persisted application records; Wishlist → Applied → Interviewing → Offered/Rejected kanban) remains unscheduled future work — it is UI/data-model work, not agent orchestration, and stays out of Sprint 8's boundaries.
 
-### Sprint 8 — CrewAI Multi-Agent System & AI-First Agent Workspace
-See "Active Sprint" above and `Sprint_08/` for full detail.
+### Sprint 8 — CrewAI Multi-Agent System & AI-First Agent Workspace (Complete)
+See "Completed Sprints" above and `Sprint_08/` for full detail.
 
-### Sprint 9 — AI Interview Coach (Superseded)
-Originally scoped as simulated interview mode with question generation and structured feedback. **Delivered inside Sprint 8** as the Interview Coach Agent (text-based Q&A + feedback, session-scoped, no audio/video — matching the original "text input... session-based" framing). This sprint number is retired; no further Sprint 9 work is planned under this title.
+### Sprint 9 — AI Interview Coach: Mock Interview Sessions, Adaptive Follow-Up & Feedback (Complete)
+See "Completed Sprints" above and `Sprint_09/` for full detail.
 
 ### Sprint 10 — Career Roadmap & Learning Engine
-Skill gap analysis extended into a personalized learning path generator. Identifies missing skills against a target role, maps them to recommended resources (courses, projects, certifications), and generates a chronological study plan. Architecture: extends existing `jdMatcher.ts` skill-gap detection; learning resource suggestions via AI prompting (no external learning API dependency by default — can be added if a suitable free tier is identified).
+See "Next Sprint" above for full detail.
 
 ### Sprint 11 — Premium UI/UX Redesign
 Full design system refresh: design tokens, component library, accessibility pass (WCAG AA), responsive layout improvements, animation polish. This is the sprint where the "AI Career Operating System" visual identity is locked in. Constraint: no feature work in this sprint — UI only.
@@ -99,29 +111,3 @@ Vercel production deployment, custom domain, CI/CD pipeline (GitHub Actions), en
 - Add a real "Actual Outcome" paragraph when a sprint completes — do not invent details, only write what was actually verified
 - Never expand future sprint descriptions here — detail lives in `Sprint_NN/Day_NN.md`
 - If a sprint's technical premises change (e.g., a framework decision), log the change in `20_Decision_Log.md` first, then update this file
-
-### Sprint 6 — AI Career Coach ✅ Complete
-**Goal:** Introduce a conversational AI Career Coach as an additional interface layer — grounded in the candidate's resume, HireLens ATS analysis, and optional JD context. The Coach explains existing intelligence rather than replacing it.
-**Architecture decision:** Stateless API (client-side React state conversation window), native ReadableStream streaming, Firebase auth verified, `google/gemini-2.5-flash` model, deterministic ATS engine explanation, client-side PDF/TXT document attachment upload capability.
-**Key deliverables:**
-- `lib/careerCoachService.ts` — pure context builders and type definitions
-- `app/api/career-coach/route.ts` — authenticated streaming endpoint
-- `app/api/parse-pdf/route.ts` — PDF parsing endpoint returning extracted text
-- `app/dashboard/career-coach/page.tsx` — full chat UI with document attachment upload, single robot avatar streaming, starter prompts, context inspector
-- `components/Sidebar.tsx` — "AI Career Coach" navigation entry added
-- `tests/careerCoachSafety.test.ts` — 34 automated assertions + 5 manual QA cases passed 100%
-**Non-negotiable:** Coach never fabricates ATS scores, skills, experience, or qualifications. ATS scores remain deterministic engine output — the Coach explains them.
-**See:** `Sprint_06/Day_01.md` through `Day_08.md`
-
-### Sprint 8 — CrewAI Multi-Agent System & AI-First Agent Workspace 🟦 Planned
-**Goal:** Make an orchestrating AI Career Agent the primary interface after login, backed by a new Python/FastAPI + CrewAI microservice that calls back into the *existing* Next.js deterministic services (ATS engine, resume optimizer, cover letter generator, JD matcher) rather than duplicating them, plus two new agent-native capabilities (Job Search, Interview Prep) pulled forward per the Sprint 8 Scope Directive.
-**Architecture decision:** Separate Python/FastAPI microservice (`agent-service/`) hosting CrewAI, deployed independently of the Vercel-hosted Next.js app; Next.js exposes an authenticated proxy route (`/api/agent/*`) that verifies the Firebase ID token, mints a short-lived internal service JWT carrying the verified `uid`, and forwards the request — the Python service never receives or trusts a raw client-supplied `userId`. Full rationale in `20_Decision_Log.md` and `Sprint_08/Day_01.md`.
-**Key deliverables (planned):**
-- `agent-service/` — new FastAPI + CrewAI Python microservice (Manager Agent + 7 specialized agents + typed tools)
-- `frontend/app/api/agent/chat/route.ts` — authenticated streaming proxy, NDJSON agent-event passthrough
-- `frontend/app/api/internal/*` — new internal-only Next.js endpoints wrapping `atsEngine.ts`/`atsAnalyzer.ts`, `jdMatcher.ts`, and the resume/cover-letter prompt logic for the agent service to call (single source of truth preserved, nothing reimplemented in Python)
-- `frontend/app/dashboard/agent/page.tsx` — new Agent Workspace (conversation pane + Artifact Canvas), becomes the default post-login destination
-- `frontend/components/agent/*` — new Generative UI artifact renderers (ATS score card, resume diff, job result card, skill-gap card, cover-letter preview, interview question card, agent activity trace)
-- `tests/agentToolContracts.test.ts`, `tests/agentSafety.test.ts`, and Python-side `agent-service/tests/` — safety, authorization, and structured-response test suites
-**Non-negotiable:** The agent never recalculates or invents an ATS score, never writes to Firestore or `ResumeContext` directly, and never applies a resume change without an explicit user Apply action. All resume-changing tool output is a structured, reviewable diff.
-**See:** `Sprint_08/Day_01.md` through `Day_10.md`

@@ -122,10 +122,40 @@ async function runArtifactRendererTest() {
                 },
             },
         },
+        {
+            type: "interview_feedback_card",
+            data: {
+                question: "Explain database indexing.",
+                answer: "I use B-Tree indexes on primary and foreign keys to speed up lookups.",
+                clarity: "clear",
+                structure: "structured",
+                specificity: "concrete",
+                technical_depth: "proficient",
+                strengths: ["Clear terminology", "Appropriate index type mentioned"],
+                improvements: ["Could explain write overhead and index maintenance"],
+                suggested_answer_direction: "Structure with situation, trade-offs, and metrics.",
+            },
+        },
+        {
+            type: "interview_report_card",
+            data: {
+                interview_type: "technical",
+                target_role: "Senior Backend Engineer",
+                questions_asked: 5,
+                readiness_by_category: {
+                    "System Design": "Strong",
+                    "Database Engineering": "Moderate",
+                },
+                strengths: ["System design clarity", "Good architectural patterns"],
+                improvement_areas: ["Database internals"],
+                priority_topics: ["PostgreSQL indexing", "Replication"],
+                note: "These are coaching recommendations, not guaranteed measurements.",
+            },
+        },
     ];
 
-    // 1. Verify all 7 artifact types dispatch to valid React elements
-    console.log("1. Testing dispatch for all 7 supported artifact types...");
+    // 1. Verify all 10 artifact types dispatch to valid React elements
+    console.log("1. Testing dispatch for all 10 supported artifact types...");
     for (const art of mockArtifacts) {
         const rendered = ArtifactRenderer({ artifact: art });
         if (!rendered) {

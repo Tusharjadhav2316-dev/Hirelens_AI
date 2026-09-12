@@ -57,6 +57,7 @@ export interface AgentStreamPayload {
   messages: AgentChatMessage[];
   resume?: Resume;
   attachments?: AttachmentContext[];
+  interview_session?: InterviewSessionState;
 }
 
 // 1. ATS Score Card Payload
@@ -113,10 +114,64 @@ export interface InterviewQuestionItem {
   category?: string;
   difficulty?: "Easy" | "Medium" | "Hard" | string;
   keyTips?: string[];
+  isActive?: boolean;
+  questionIndex?: number;
+  totalQuestions?: number;
 }
 
 export interface InterviewQuestionArtifactData {
   questions: InterviewQuestionItem[];
+  session?: InterviewSessionState;
+  active_question?: InterviewQuestionItem | QuestionAskedRecord;
+  latest_feedback?: Record<string, any>;
+  is_follow_up?: boolean;
+}
+
+export interface QuestionAskedRecord {
+  id: string;
+  question: string;
+  category?: string;
+  difficulty?: string;
+}
+
+export interface AnswerGivenRecord {
+  questionId: string;
+  answer: string;
+  feedback?: Record<string, any>;
+}
+
+export interface InterviewSessionState {
+  sessionId: string;
+  interviewType: "hr" | "behavioral" | "technical" | "mixed";
+  targetRole: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  questionIndex: number;
+  questionsAsked: QuestionAskedRecord[];
+  answersGiven: AnswerGivenRecord[];
+  status: "in_progress" | "completed";
+}
+
+export interface InterviewFeedbackArtifactData {
+  question: string;
+  answer: string;
+  clarity: string;
+  structure: string;
+  specificity: string;
+  technical_depth: string;
+  strengths: string[];
+  improvements: string[];
+  suggested_answer_direction: string;
+}
+
+export interface InterviewReportArtifactData {
+  interview_type: string;
+  target_role: string;
+  questions_asked: number;
+  readiness_by_category: Record<string, "Strong" | "Moderate" | "Needs Improvement">;
+  strengths: string[];
+  improvement_areas: string[];
+  priority_topics: string[];
+  note?: string;
 }
 
 // 7. Task Progress Payload
@@ -132,13 +187,15 @@ export interface ResumeArtifactData {
   summaryNote?: string;
 }
 
-// Closed Discriminated Union for Artifacts
+// Closed Discriminated Union for Artifacts (10 Types)
 export type ATSScoreArtifact = { id?: string; title?: string; type: "ats_score_card"; data: ATSScoreArtifactData };
 export type ResumeDiffArtifact = { id?: string; title?: string; type: "resume_diff"; data: ResumeDiffArtifactData };
 export type JobResultArtifact = { id?: string; title?: string; type: "job_result_card"; data: JobResultArtifactData };
 export type SkillGapArtifact = { id?: string; title?: string; type: "skill_gap_card"; data: SkillGapArtifactData };
 export type CoverLetterArtifact = { id?: string; title?: string; type: "cover_letter_preview"; data: CoverLetterArtifactData };
 export type InterviewQuestionArtifact = { id?: string; title?: string; type: "interview_question_card"; data: InterviewQuestionArtifactData };
+export type InterviewFeedbackArtifact = { id?: string; title?: string; type: "interview_feedback_card"; data: InterviewFeedbackArtifactData };
+export type InterviewReportArtifact = { id?: string; title?: string; type: "interview_report_card"; data: InterviewReportArtifactData };
 export type TaskProgressArtifact = { id?: string; title?: string; type: "task_progress"; data: TaskProgressArtifactData };
 export type ResumeArtifact = { id?: string; title?: string; type: "resume_preview"; data: ResumeArtifactData };
 
@@ -149,6 +206,8 @@ export type Artifact =
   | SkillGapArtifact
   | CoverLetterArtifact
   | InterviewQuestionArtifact
+  | InterviewFeedbackArtifact
+  | InterviewReportArtifact
   | TaskProgressArtifact
   | ResumeArtifact;
 

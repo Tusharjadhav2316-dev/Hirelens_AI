@@ -40,7 +40,7 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 6 | 7 | UX hardening — errors, input limits, context inspector, responsive | `Sprint_06/Day_07.md` |
 | 6 | 8 | `tests/careerCoachSafety.test.ts` — 37 assertions + 5 manual QA | `Sprint_06/Day_08.md` |
 | 8 | 1 | Scaffold `agent-service/` (FastAPI), internal JWT auth, `/api/agent/chat` proxy route | `Sprint_08/Day_01.md` |
-| 8 | 2 | Manager Agent + 7 specialized agent role/goal/backstory definitions, hierarchical Crew | `Sprint_08/Day_02.md` |
+| 8 | 2 | Manager Agent + 6 specialized agent role/goal/backstory definitions, hierarchical Crew | `Sprint_08/Day_02.md` |
 | 8 | 3 | `/api/internal/ats-score`, `/api/internal/jd-match`, resume/ATS/optimizer/cover-letter tools | `Sprint_08/Day_03.md` |
 | 8 | 4 | `JobSearchTool` + `JobProviderAdapter`, interview prep tools, existing-feature wiring | `Sprint_08/Day_04.md` |
 | 8 | 5 | Application workflow sequencing, Manager delegation logic, task planning | `Sprint_08/Day_05.md` |
@@ -49,3 +49,13 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 8 | 8 | Generative UI artifact renderers, closed artifact-type union | `Sprint_08/Day_08.md` |
 | 8 | 9 | Apply/Reject resume-diff flow, `agentUsage` rate-limit counter, cost/security hardening | `Sprint_08/Day_09.md` |
 | 8 | 10 | Safety/authorization/schema test suites, full regression pass, Sprint 8 close-out | `Sprint_08/Day_10.md` |
+| 9 | 1 | Repository/Sprint 8 audit, routing-mechanism correction, Sprint 9 architecture | `Sprint_09/Day_01.md` |
+| 9 | 2 | `interview_manager.py` module, session state schema, streaming-reuse decision | `Sprint_09/Day_02.md` |
+| 9 | 3 | Interview context wiring (resume/JD/attachments into session start) | `Sprint_09/Day_03.md` |
+| 9 | 4 | `interview_type`/`difficulty` params, question personalization, difficulty progression rule | `Sprint_09/Day_04.md` |
+| 9 | 5 | Mock interview session flow, adaptive follow-up decision logic | `Sprint_09/Day_05.md` |
+| 9 | 6 | `evaluate_interview_answer` wired live, `generate_interview_report`, feedback structuring | `Sprint_09/Day_06.md` |
+| 9 | 7 | Interview Coach UI — answer input, feedback display, progress, setup | `Sprint_09/Day_07.md` |
+| 9 | 8 | `interview_feedback_card`/`interview_report_card` artifacts, streaming wiring | `Sprint_09/Day_08.md` |
+| 9 | 9 | Session-tampering/anti-fabrication hardening, cost/loop ceilings | `Sprint_09/Day_09.md` |
+| 9 | 10 | Full interview test matrix (TEST A–O), regression, Sprint 9 close-out | `Sprint_09/Day_10.md` |

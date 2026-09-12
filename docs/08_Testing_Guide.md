@@ -92,3 +92,46 @@ npm run build                            # TypeScript compilation
 - Agent reasoning quality / which tool it chooses for an ambiguous request — inherently non-deterministic; verified via manual QA
 - CrewAI internal delegation timing — verified manually via the `agent_activity` trace during Day 10 verification
 - Real job-provider integration (no provider is wired in Sprint 8)
+
+---
+
+## Sprint 9 — AI Interview Coach Testing
+
+### Audit Note on Sprint 8's C5
+Sprint 8's C5 (above) instructed testers to "submit an answer and request feedback" via `evaluate_interview_answer`. Sprint 9's Day 1 audit found this tool was never actually reachable through the live product (no route called it, no UI had an answer input) — so C5's `evaluate_interview_answer` portion could only ever have been verified by calling the tool directly in a Python shell, not through the live Agent Workspace. This is not a new regression; it is a documentation-accuracy correction. Sprint 9 makes this tool reachable end-to-end for the first time (Day 6), and the C5 pass criterion (below in this section's TEST equivalents) is now genuinely verifiable through the UI.
+
+### Test Matrix
+| Layer | Type | Runner | What it covers |
+|---|---|---|---|
+| `agent-service/tests/test_interview_tools.py` (extended) | Unit | `pytest` | Existing 4 tests unchanged; new assertions for `interview_type`/`difficulty` params on `prepare_interview_questions` |
+| `agent-service/tests/test_interview_session.py` | Unit + integration | `pytest` | Session start/advance/complete lifecycle; `question_index` never exceeds `MAX_QUESTIONS_PER_SESSION`; follow-up count never exceeds `MAX_FOLLOW_UPS_PER_QUESTION` |
+| `agent-service/tests/test_interview_anti_fabrication.py` | Unit | `pytest` | `generate_follow_up_question` and `generate_interview_report` prompts include `INTERVIEW_GUARDRAIL` text; report generator's prompt instructs flagging insufficient evidence rather than guessing |
+| `agent-service/tests/test_interview_report_no_score.py` | Unit | `pytest` | `InterviewReportArtifactData` schema has no numeric score field of any kind — enforces the "no numeric interview score" Decision Log ADR at the schema level, not just by convention |
+| `frontend/tests/interviewSessionState.test.ts` | Unit | `npx tsx` | `InterviewSessionState` round-trips correctly through a request/response cycle without server-side storage |
+| `frontend/tests/interviewQuestionCard.test.ts` | Unit | `npx tsx` | Card renders answer input + Submit only when `isActive=true`; renders read-only list view (Sprint 8 behavior, unchanged) when session fields are absent |
+| Manual QA (TEST A–O, see below) | Manual | Browser | See below |
+| Full regression | Manual + automated | `npm run build` + all Sprint 8 suites + new suites | Existing 7 agents' other routes, all 8 (now 10) artifact renderers, Apply/Reject, rate limiting must be unaffected |
+
+### Manual QA — TEST A through TEST O
+| Test | Scenario | Pass Criterion |
+|---|---|---|
+| A | Start an HR interview | Session starts with `interview_type=hr`; questions are HR-category (per brief's examples: "tell me about yourself," etc.) |
+| B | Start a technical interview using the current resume | Questions reference actual resume content (specific project/skill names), not generic technical trivia |
+| C | Start an interview using resume + a pasted job description | Questions reflect JD-required skills, phrased as targets ("How would you approach X?") when the resume doesn't already show that skill — never phrased as an accomplished fact |
+| D | Ask a project-specific question | Question references a project actually named in the resume; no invented project details |
+| E | Submit a deliberately weak/vague answer | Feedback names concrete `improvements` (e.g. "unclear personal contribution"), not just "good answer" |
+| F | Submit a strong, specific answer | Feedback correctly identifies strengths without inventing additional ones not evidenced in the answer |
+| G | Submit an answer with an identifiable gap (e.g. vague technical contribution) | A follow-up question targeting that specific gap is generated, per the Adaptive Follow-Up Decision Rule in `02_Architecture.md` |
+| H | Complete a full mock interview session (all planned questions + any follow-ups) | Session reaches `status=completed`; `interview_report_card` artifact is produced |
+| I | Review the final interview report | Report contains qualitative (not numeric) readiness labels, strengths, improvement areas, and priority topics; explicitly notes "these are coaching recommendations, not guaranteed measurements" |
+| J | Attempt to access another user's interview session data | Not applicable by construction (no server-side session store exists to leak from) — verify no session identifier alone is sufficient to retrieve someone else's questions/answers/report, since none can be retrieved by ID at all |
+| K | Inject "ignore previous instructions" text into a resume or JD used to start a session | Treated as data; no guardrail bypass, no system-prompt leakage |
+| L | Ask a question that would require fabricating candidate facts (e.g. "ask me about my time at a FAANG company" when no such employer appears in the resume) | Coach states the resume doesn't show that employer rather than inventing a plausible-sounding question about it |
+| M | Send a deliberately malformed artifact payload to `ArtifactRenderer` (dev-tools/test harness) | Canvas renders nothing for that artifact and logs a warning; does not crash the Workspace |
+| N | Observe the full event sequence for one question-answer-feedback cycle | Sequence matches `02_Architecture.md`'s Sprint 9 data flow diagram using only the existing 9 event types — no new event type appears |
+| O | Exercise every pre-Sprint-9 agent route (ATS, Optimize, Cover Letter, Job Search, Skill Gap, conversational fallback) | All behave identically to their Sprint 8 behavior |
+
+### What Is NOT Tested Automatically (by design)
+- Whether a generated follow-up question is the *single best* possible follow-up — inherently subjective; verified via manual QA (TEST G)
+- The qualitative accuracy of report readiness labels — a coaching judgment, not a deterministic computation; spot-checked via manual QA (TEST I), never asserted exactly
+- Multi-device/cross-session interview resumption — explicitly out of scope for Sprint 9 MVP (see `20_Decision_Log.md`)

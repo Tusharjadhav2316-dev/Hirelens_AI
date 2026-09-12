@@ -6,6 +6,8 @@ import AgentActivityTrace, { TraceStep } from "./AgentActivityTrace";
 import ArtifactRenderer from "./ArtifactRenderer";
 import { Artifact } from "@/types/agent";
 
+import InterviewSetup, { InterviewConfig } from "./InterviewSetup";
+
 interface ArtifactCanvasProps {
     traceSteps: TraceStep[];
     isStreaming: boolean;
@@ -14,6 +16,12 @@ interface ArtifactCanvasProps {
     error?: string | null;
     onRetry?: () => void;
     onImproveResume?: () => void;
+    onSubmitInterviewAnswer?: (answer: string) => void;
+    onCancelInterview?: () => void;
+    isSubmittingAnswer?: boolean;
+    showInterviewSetup?: boolean;
+    onStartInterview?: (config: InterviewConfig) => void;
+    onCancelInterviewSetup?: () => void;
 }
 
 export default function ArtifactCanvas({
@@ -24,11 +32,17 @@ export default function ArtifactCanvas({
     error = null,
     onRetry,
     onImproveResume,
+    onSubmitInterviewAnswer,
+    onCancelInterview,
+    isSubmittingAnswer = false,
+    showInterviewSetup = false,
+    onStartInterview,
+    onCancelInterviewSetup,
 }: ArtifactCanvasProps) {
     const hasTrace = traceSteps.length > 0;
     const hasContent = Boolean(streamContent && streamContent.trim().length > 0);
     const hasArtifacts = artifacts.length > 0;
-    const isEmpty = !hasTrace && !hasContent && !hasArtifacts && !error && !isStreaming;
+    const isEmpty = !hasTrace && !hasContent && !hasArtifacts && !error && !isStreaming && !showInterviewSetup;
 
     return (
         <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 overflow-y-auto custom-scrollbar">
@@ -57,6 +71,14 @@ export default function ArtifactCanvas({
 
             {/* Canvas Body */}
             <div className="flex-1 flex flex-col gap-6">
+                {/* 0. Interview Setup Card (when triggered via Quick Action / user command) */}
+                {showInterviewSetup && onStartInterview && (
+                    <InterviewSetup
+                        onStart={onStartInterview}
+                        onCancel={onCancelInterviewSetup}
+                    />
+                )}
+
                 {/* 1. Empty State */}
                 {isEmpty && (
                     <div className="my-auto py-12 px-4 text-center max-w-md mx-auto flex flex-col items-center">
@@ -114,6 +136,9 @@ export default function ArtifactCanvas({
                                 key={artifact.id || `artifact-${idx}`}
                                 artifact={artifact}
                                 onImproveResume={onImproveResume}
+                                onSubmitInterviewAnswer={onSubmitInterviewAnswer}
+                                onCancelInterview={onCancelInterview}
+                                isSubmittingAnswer={isSubmittingAnswer}
                             />
                         ))}
                     </div>

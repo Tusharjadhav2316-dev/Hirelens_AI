@@ -152,3 +152,33 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Cross-service prompt centralization (shared config for TS + Python personas) | Tracked as accepted tech debt from the Career Agent persona port | Unscheduled — flagged in `20_Decision_Log.md` |
 | Audio/video interview recording | Original Sprint 9 scope explicitly limited to text input; Sprint 8 keeps that limitation | Unscheduled |
 | CrewAI Flows / multi-crew orchestration | Single hierarchical Crew is sufficient for one-turn-at-a-time orchestration | Revisit only if Application Workflow sequencing needs explicit control flow |
+
+## Sprint 9 Items — AI Interview Coach: Mock Interview Sessions, Adaptive Follow-Up & Feedback
+
+| Feature | Priority | Status | Sprint/Day | Notes |
+|---|---|---|---|---|
+| `interview_manager.py` — session lifecycle module | High | Not Started | Sprint 9, Day 2 | Plain Python module, not a CrewAI Agent |
+| `InterviewSessionState` schema (Python + TS) | High | Not Started | Sprint 9, Day 2 | Client-held, request-scoped — no new Firestore collection |
+| `prepare_interview_questions` extended (`interview_type`, `difficulty`) | High | Not Started | Sprint 9, Day 4 | Backward-compatible defaults preserve Sprint 8's Route 4 call site |
+| `evaluate_interview_answer` wired into a real answer-submission route | Critical | Not Started | Sprint 9, Day 6 | Tool already exists and is tested — this closes the "never actually reachable" gap found in Day 1 audit |
+| `generate_follow_up_question` tool | High | Not Started | Sprint 9, Day 5 | Adaptive follow-up, transparent decision rule (not hidden ML) |
+| `generate_interview_report` tool | High | Not Started | Sprint 9, Day 6 | Qualitative labels only — no numeric interview score |
+| `InterviewQuestionCard.tsx` extended (answer input + Submit for active question) | High | Not Started | Sprint 9, Day 7 | Read-only list view (Sprint 8 behavior) preserved when no active session |
+| `InterviewFeedbackCard.tsx`, `InterviewReportCard.tsx` | High | Not Started | Sprint 9, Day 8 | 2 new artifact types (10 total after Sprint 9) |
+| Interview setup UI (type/difficulty/question-count selection) | Medium | Not Started | Sprint 9, Day 7 | Feedback-timing mode NOT included — always after-each-answer for MVP |
+| `MAX_QUESTIONS_PER_SESSION` / `MAX_FOLLOW_UPS_PER_QUESTION` ceilings | High | Not Started | Sprint 9, Day 9 | Cost/loop control, on top of existing `agentUsage` daily counter |
+| `test_interview_session.py`, `test_interview_anti_fabrication.py`, `test_interview_report_no_score.py` | High | Not Started | Sprint 9, Day 10 | New; `test_interview_tools.py` extended, not replaced |
+| Sprint 8 close-out audit correction (agent list, artifact count) | High | Done (this documentation pass) | Sprint 9, Day 1 | See `01_Master_Roadmap.md` and `20_Decision_Log.md` |
+
+## Deferred From Sprint 9 (Candidates for Future Sprints)
+
+| Feature | Reason Deferred | Target Sprint |
+|---|---|---|
+| Persistent, cross-device interview session storage (`interviewSessions` Firestore collection) | No stated requirement to resume a session across devices/reloads; would introduce new security-rule/retention design for sensitive candidate answer text | Unscheduled — revisit if explicitly requested |
+| Numeric interview readiness score | Deliberately avoided — risk of confusion with the authoritative ATS score per the brief's explicit warning | Unscheduled — revisit only with an explicit disambiguation UX design |
+| Coding / live problem-solving interview mode with code execution | No code-execution sandbox exists anywhere in the stack; a fake "coding mode" without real execution would be technical-question-in-disguise | Unscheduled |
+| "End of interview only" feedback-timing mode | Sprint 9 MVP always shows feedback after each answer | Unscheduled — small addition if requested |
+| Voice/video mock interview (speech-to-text, tone/facial analysis) | Explicitly out per the brief's Voice/Video Boundary — no microphone/video capability exists in the repository | Unscheduled — future multimodal sprint |
+| Full personalized study-roadmap generation from interview weaknesses | Sprint 9 surfaces priority topics in the report only; the complete learning-path/resource-mapping engine belongs to Sprint 10 | Sprint 10 (Career Roadmap & Learning Engine) |
+| Company-specific interview preparation (real company process/culture data) | No verified company-data source exists — same boundary already logged for the Company Research Agent in Sprint 8 | Unscheduled |
+| Retrofitting real CrewAI `Crew.kickoff()` hierarchical delegation across all 7 agents | Out of Sprint 9's stated scope; the deterministic router is working in production | Unscheduled — would need its own dedicated sprint and justification |
