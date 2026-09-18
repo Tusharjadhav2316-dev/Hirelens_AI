@@ -593,3 +593,248 @@ Interview session moments reuse the existing 9 `AgentEvent` types exactly as del
 
 ### Existing Features — Explicitly Unmodified
 Resume Builder, ATS Analyzer, Resume Optimizer, Cover Letter, Career Coach, Job Search, the Agent Workspace shell, all 7 existing agents' other tool paths, and the full Sprint 8 test suite continue to run exactly as before Sprint 9. Sprint 9 only extends `interview_tools.py`, adds `interview_manager.py`, extends Route 4, and adds/extends the interview-specific frontend artifacts.
+
+---
+
+## Sprint 10 Architecture — AI Interview Trainer: Dedicated Multimodal, Voice-First Interview Training
+
+> Planning-stage architecture (Day 1 Architecture Gate output). Builds on Sprint 9's working interview engine. JARVIS technology analysis lives in `16_JARVIS_Reuse_Analysis.md`; all architecture decisions are logged in `20_Decision_Log.md`.
+
+### EXISTING HIRELENS vs. NEW SPRINT 10 vs. JARVIS-DERIVED vs. FUTURE
+
+| Capability | Classification | Evidence / Location |
+|---|---|---|
+| Interview session lifecycle (start/present/answer/follow-up/complete/report) | **EXISTING** (Sprint 9) | `agent-service/crew/interview_manager.py` — verified present with `MAX_QUESTIONS_PER_SESSION`, `MAX_FOLLOW_UPS_PER_QUESTION` |
+| 4 interview tools (`prepare_interview_questions`, `evaluate_interview_answer`, `generate_follow_up_question`, `generate_interview_report`) | **EXISTING** (Sprint 9) | `agent-service/tools/interview_tools.py` |
+| Route 4a/4b/4c session sub-router | **EXISTING** (Sprint 9) | `agent-service/crew/manager.py` lines ~386–525 |
+| Interview artifact renderers (question/feedback/report) | **EXISTING** (Sprint 9) | `frontend/components/agent/artifacts/` |
+| Firebase auth + internal JWT boundary | **EXISTING** (Sprint 8) | `frontend/lib/verifyAuth.ts`, `/api/agent/chat` |
+| Artifact Canvas + NDJSON streaming | **EXISTING** (Sprint 8) | `ArtifactRenderer.tsx`, `agentStreamClient.ts`, `schemas/events.py` |
+| `INTERVIEW_GUARDRAIL` anti-fabrication prompt | **EXISTING** (Sprint 8/9) | `agent-service/tools/interview_tools.py` |
+| Dedicated Trainer route, navigation entry, Interview Room | **NEW SPRINT 10** | `frontend/app/dashboard/interview-trainer/` |
+| Universal role intelligence (`analyze_role`) | **NEW SPRINT 10** | Replaces Sprint 9's hardcoded `"Software Engineer"` fallback |
+| Microphone capture + permission state machine | **NEW SPRINT 10, JARVIS-DERIVED [ADAPT]** | Pattern from `lib/voice-pipeline.ts`; globals removed, hook-scoped |
+| STT route + provider adapter | **NEW SPRINT 10, JARVIS-DERIVED [WRAP]** | Pattern from JARVIS `app/api/stt/route.ts`; **auth added** |
+| TTS route + provider adapter + playback queue | **NEW SPRINT 10, JARVIS-DERIVED [WRAP + ADAPT]** | Pattern from JARVIS `app/api/tts/route.ts` + playback queue |
+| Voice Activity Detection (assist only) | **NEW SPRINT 10, BUILT FROM SCRATCH [REIMPLEMENT]** | **No VAD exists in JARVIS** — confirmed |
+| Optional camera + geometric visual signals | **NEW SPRINT 10, JARVIS-DERIVED [ADAPT]** | Capture pattern from `FaceScanner.tsx`; detection-only, recognition discarded |
+| Speech/delivery intelligence (transcript + timing metrics) | **NEW SPRINT 10** | Transcript- and timing-derived only |
+| Persistent trainer sessions | **NEW SPRINT 10** | `users/{uid}/interviewTrainerSessions/{sessionId}` |
+| Facial emotion / expression inference | **EXPLICITLY REJECTED** | JARVIS `lib/emotion-detection.ts` not reused — see `20_Decision_Log.md` |
+| Face recognition / biometric identity | **EXPLICITLY REJECTED** | JARVIS uses it for login; out of scope and a privacy liability |
+| Wake word | **EXPLICITLY REJECTED** | Interview turns are explicit; adds nothing |
+| Streaming/partial STT transcripts | **FUTURE** | Batch only in Sprint 10 |
+| Raw audio/video storage & playback review | **FUTURE** | Needs its own retention/deletion/consent design |
+| Numeric confidence score | **FUTURE / likely never** | Requires a defensible measurement system that does not exist |
+| Career Roadmap / learning-path generation | **FUTURE (slot 10b)** | Explicitly not absorbed |
+
+### High-Level System Diagram
+
+```
+                              USER
+                                |
+                    Sidebar: "AI Interview Trainer"   <-- NEW dedicated nav entry
+                                |
+                  /dashboard/interview-trainer  (NEW dedicated feature)
+                                |
+        +-----------------------+------------------------+
+        |                       |                        |
+   Landing page          Setup / Consent           INTERVIEW ROOM
+   (past sessions,       (role, JD, type,          (full-viewport,
+    start new)            difficulty, mode,         owns media streams)
+                          mic + camera consent)            |
+                                                           |
+   ===================== CLIENT-SIDE ONLY (browser) ========================
+   |  useInterviewMicrophone   -> MediaRecorder blob                      |
+   |  useInterviewerVoice      -> audio playback queue + cancellation     |
+   |  useInterviewCamera       -> MediaStream -> face-api.js (IN BROWSER) |
+   |       camera frames NEVER leave the browser                          |
+   |  useSpeechMetrics         -> duration, WPM, filler counts            |
+   =========================================================================
+        |                       |                        |
+        | audio blob            | text to speak          | derived signals only
+        v                       v                        v
+   POST /api/interview/stt   POST /api/interview/tts   (bundled into answer payload)
+   (verifyAuth + size cap)   (verifyAuth + length cap)
+        |                       |
+        v                       v
+   SpeechProviderAdapter    SpeechProviderAdapter
+   (SarvamSpeechProvider | NullSpeechProvider)
+        |                       |
+        v                       v
+   transcript (text)        audio (base64)
+        |
+        +-----> POST /api/agent/chat  (EXISTING authenticated proxy, unchanged)
+                          |
+                  internal JWT {uid}  (EXISTING boundary)
+                          v
+                agent-service (EXISTING FastAPI)
+                          |
+                manager.py Route 4  (EXISTING, extended with a trainer branch)
+                          v
+                interview_manager.py  (EXISTING Sprint 9 engine, extended)
+                    |         |          |         |
+              analyze_role  present   process   complete
+              (NEW tool)    _question  _answer   _session
+                                          |
+                          +---------------+---------------+
+                          v               v               v
+                   evaluate_answer  analyze_speech   generate_follow_up
+                   (EXISTING)       _signals (NEW)   (EXISTING)
+                                          v
+                              coaching decision (EXISTING adaptive rule,
+                                          extended with speech signals)
+                                          v
+                        NDJSON artifact events (EXISTING 9 event types)
+                                          v
+                        Interview Room renders trainer artifacts
+                                          v
+                  Firestore: users/{uid}/interviewTrainerSessions/{sessionId}
+                        (text + derived signals only; NO audio, NO video)
+```
+
+### Universal Role Intelligence
+
+```python
+# NEW tool in agent-service/tools/interview_tools.py
+@tool("analyze_role")
+def analyze_role(
+    target_role: str,                      # free text, ANY role - never defaulted to "Software Engineer"
+    job_description: Optional[str] = None,
+    resume_text: Optional[str] = None,
+) -> str:
+    """Returns RoleIntelligence JSON. No hardcoded role taxonomy - prompt-driven so
+    arbitrary roles (Teacher, Financial Analyst, Consultant) work identically to
+    Software Engineer. Shares INTERVIEW_GUARDRAIL."""
+```
+
+```python
+class RoleIntelligence(BaseModel):
+    target_role: str
+    role_summary: str
+    likely_competencies: list[str]
+    interview_categories: list[CategoryWeight]     # e.g. [{"category":"case analysis","weight":0.3}]
+    technical_balance: Literal["mostly_technical", "balanced", "mostly_non_technical"]
+    suggested_topics: list[str]
+    evidence_basis: Literal["job_description", "role_inference", "role_inference_plus_resume"]
+    assumptions: list[str]      # explicit when no JD was supplied
+    model_config = {"extra": "forbid"}
+```
+`evidence_basis` and `assumptions` directly implement the brief's requirement to distinguish JD-grounded facts from role-based inference. With no JD, `evidence_basis = "role_inference"` and the UI labels the strategy as inferred.
+
+### Session State Contract & Scope Classification
+
+| State | Scope | Location |
+|---|---|---|
+| Mic/camera `MediaStream`, permission status, VAD state, TTS queue | **Request/component-scoped** | Client React refs only — never serialized, never sent |
+| Raw audio blob | **Transient** | Browser memory + one in-flight STT request; never stored |
+| Camera frames | **Transient, never transmitted** | Browser only; `face-api.js` inference in-browser |
+| Current question, turn phase | **Interview-session-scoped** | `InterviewTrainerSession` (client mirror + Firestore) |
+| Transcripts, feedback, derived speech/visual signals, report | **PERSISTENT** | `users/{uid}/interviewTrainerSessions/{sessionId}` |
+| Resume / career context | **EXISTING, reused** | `ResumeContext` (client) — no duplicate storage created |
+
+```python
+class InterviewTrainerSession(BaseModel):
+    session_id: str
+    target_role: str
+    interview_type: Literal["hr", "behavioral", "technical", "mixed", "role_specific"]
+    difficulty: Literal["beginner", "intermediate", "advanced"]
+    training_mode: Literal["coaching", "realistic_mock"]
+    role_intelligence: Optional[RoleIntelligence] = None
+    question_index: int = 0
+    questions_asked: list[QuestionAskedRecord] = []
+    answers_given: list[TrainerAnswerRecord] = []     # transcript + feedback + signals
+    voice_enabled: bool = True
+    camera_enabled: bool = False
+    status: Literal["setup", "in_progress", "paused", "completed", "abandoned"] = "setup"
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    final_report: Optional[dict] = None
+    # NOTE: no audio_url, no video_url, no frame data - by design (20_Decision_Log.md)
+```
+
+### Speech & Visual Signal Contracts (Observable Only)
+
+```python
+class SpeechSignals(BaseModel):
+    """Transcript- and timing-derived ONLY. No pitch, no tone, no emotion, no confidence score."""
+    speaking_duration_seconds: float
+    word_count: int
+    words_per_minute: float
+    filler_word_counts: dict[str, int]      # {"um": 14, "like": 6}
+    repeated_phrases: list[str]
+    long_pause_count: int                    # from audio-energy gaps, coarse
+    answer_length_band: Literal["very_short", "short", "appropriate", "long", "very_long"]
+    model_config = {"extra": "forbid"}
+
+class VisualSignals(BaseModel):
+    """Geometric ONLY. No expression, no emotion, no identity, no age/gender."""
+    camera_enabled: bool
+    face_detected_ratio: float               # fraction of sampled frames with a face
+    out_of_frame_events: int
+    out_of_frame_total_seconds: float
+    framing_note: Optional[str]              # "camera appears below eye level"
+    model_config = {"extra": "forbid"}
+```
+`extra = "forbid"` on both is the structural guard preventing a future change from quietly adding an emotion or confidence field (tested in Day 10).
+
+### Adaptive Trainer Decision Rule (Extends Sprint 9's Rule)
+
+```
+after evaluate_answer + analyze_speech_signals:
+  content_weak  = len(feedback.improvements) >= 2 and ambiguity_marker_present
+  content_strong = len(feedback.improvements) <= 1 and len(feedback.strengths) >= 2
+
+  IF content_weak AND follow_ups_this_question < MAX_FOLLOW_UPS_PER_QUESTION:
+      -> FOLLOW-UP (difficulty unchanged)
+  ELIF training_mode == "coaching" AND (content_weak OR speech_signals warrant it):
+      -> COACHING INTERVENTION, then optionally OFFER RETRY (max 1 per question)
+  ELIF content_strong:
+      -> ADVANCE, difficulty steps up one level (capped at advanced)
+  ELSE:
+      -> ADVANCE, difficulty unchanged
+
+In realistic_mock mode, coaching interventions are suppressed during the interview
+and all coaching is deferred to the final report.
+```
+Speech signals influence *coaching content* (e.g. "you averaged 190 WPM — slow down") but never override the content-based follow-up/advance decision, keeping the interview's substance driven by answer quality rather than delivery mechanics.
+
+### New Artifact Types (Sprint 10)
+
+Extends the existing closed union (10 types after Sprint 9) to **14**:
+- `interview_setup_summary` — role intelligence + strategy, shown before starting
+- `trainer_question_card` — current question + category + difficulty + progress (Interview Room variant)
+- `trainer_answer_feedback` — content feedback + speech signals + coaching + optional retry offer
+- `trainer_interview_report` — full final report (sections below)
+
+Existing Sprint 9 interview artifacts remain for the in-Agent text flow. `ArtifactRenderer.tsx`'s exhaustive `switch` gains 4 cases; the safe `default` (log + render nothing) is unchanged.
+
+### Final Trainer Report Structure
+Session overview (role, type, difficulty, mode, duration, questions answered) · Content performance (relevance, structure, specificity, depth, reasoning, role alignment — qualitative labels) · Communication (clarity, conciseness, verbal structure, filler words, pace, pauses — with the observed numbers) · Visual presence (**only if camera was enabled**; omitted entirely otherwise, never "not measured" filler) · Strengths · Improvement areas · Question-by-question review · Top 3 priorities · Practice plan for the **next interview session** (not a learning roadmap — slot 10b boundary) · Confidence coaching (encouraging, grounded in observed signals).
+Carries the same mandatory note as Sprint 9: these are coaching recommendations, not measurements, and **not** a hiring prediction. No numeric score anywhere — `extra="forbid"` enforced.
+
+### Security Architecture
+- **Auth:** both new voice routes call the existing `verifyAuth(req)` first — correcting JARVIS's unauthenticated routes (`16_JARVIS_Reuse_Analysis.md` §5). `uid` always from verified token; no client-supplied `userId` anywhere.
+- **Session ownership:** the `users/{uid}/` Firestore path plus existing security rules make cross-user session access structurally impossible; a session ID alone grants nothing.
+- **Untrusted input:** resume, JD, **and now transcripts** are all treated as data, never instructions. Spoken answers are a new injection surface (a candidate could say "ignore your instructions") — guarded by the existing `INTERVIEW_GUARDRAIL` system-prompt placement and tested in Day 10 (TEST AH).
+- **Secrets:** speech provider key is server-side only; never reaches the browser. Internal JWT, API keys, and infrastructure details never appear in events or error messages.
+- **No chain-of-thought:** events carry only high-level status labels, as in Sprints 8–9.
+
+### Privacy Architecture
+| Data | Leaves browser? | Stored? | Retention |
+|---|---|---|---|
+| Camera frames / video | **No** | **No** | None — in-memory only |
+| Face detections | **No** (inference in-browser) | Only derived booleans/counts | With session |
+| Raw audio | Yes — one STT request only | **No** | Discarded after provider call |
+| Transcript | Yes | Yes | With session (user-deletable) |
+| Derived speech/visual signals | Yes | Yes | With session |
+Consent is explicit and separate for mic and camera; capture indicators are always visible while active; the session is deletable by the user. Nothing is recorded silently.
+
+### Cost Control
+Max interview duration (30 min), max questions (15, reusing Sprint 9's ceiling), max follow-ups per question (1, existing), max retries per question (1), max single-answer recording length (3 min → hard `MediaRecorder` stop), max TTS characters per utterance, per-session STT/TTS call caps, plus the existing per-user daily `agentUsage` counter. All voice calls flow through authenticated routes so they are attributable and cappable per user.
+
+### Failure & Recovery
+Mic denied → typing fallback offered immediately, interview proceeds. Camera denied/disconnected → session continues, visual section omitted from the report. STT failure/empty transcript → answer preserved, retry offered, typing fallback offered. TTS failure → question shown as text with a clear notice (interview never blocks on audio). Provider not configured (`NullSpeechProvider`) → Trainer runs in text mode with an honest explanation, never fabricated audio. Network interruption → session persisted in Firestore, resumable. Refresh/crash → resumable from the last persisted turn. Duplicate submit → guarded by the ported transition-lock pattern.
+
+### Existing Features — Explicitly Unmodified
+Resume Builder, ATS Analyzer, Resume Optimizer, Cover Letter, Career Coach, Job Search, Agent Workspace, all 7 agents, all existing tools, Sprint 9's in-Agent text interview flow (Route 4a/4b/4c), Firebase auth, existing Firestore collections, the existing 9 streaming event types, and every existing test suite all continue to operate unchanged. Sprint 10 is additive: one new route tree, two new voice routes, one new Firestore collection, new hooks/components, 4 new artifact types, and extensions to `interview_manager.py`.

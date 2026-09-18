@@ -13,6 +13,7 @@ import {
     Settings,
     MessageSquare,
     Sparkles,
+    Headphones,
     X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ interface SidebarProps {
 
 const navigationItems = [
     { name: "AI Career Agent", href: "/dashboard/agent", icon: Sparkles, isPrimary: true },
+    { name: "AI Interview Trainer", href: "/dashboard/interview-trainer", icon: Headphones },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "AI Career Coach", href: "/dashboard/career-coach", icon: MessageSquare },
     { name: "Resume Builder", href: "/dashboard/builder", icon: FileEdit },

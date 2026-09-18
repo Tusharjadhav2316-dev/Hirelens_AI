@@ -12,12 +12,20 @@ import InterviewFeedbackCard from "./artifacts/InterviewFeedbackCard";
 import InterviewReportCard from "./artifacts/InterviewReportCard";
 import TaskProgress from "./artifacts/TaskProgress";
 import ResumePreviewCard from "./artifacts/ResumePreviewCard";
+import InterviewSetupSummary from "./artifacts/InterviewSetupSummary";
+import TrainerQuestionCard from "./artifacts/TrainerQuestionCard";
+import TrainerAnswerFeedback from "./artifacts/TrainerAnswerFeedback";
+import TrainerInterviewReport from "./artifacts/TrainerInterviewReport";
 
 interface ArtifactRendererProps {
     artifact: Artifact | any;
     onImproveResume?: () => void;
     onSubmitInterviewAnswer?: (answer: string) => void;
     onCancelInterview?: () => void;
+    onRetryQuestion?: () => void;
+    onContinueInterview?: () => void;
+    onStartNewSession?: () => void;
+    onDeleteSession?: () => void;
     isSubmittingAnswer?: boolean;
 }
 
@@ -26,6 +34,10 @@ export function ArtifactRenderer({
     onImproveResume,
     onSubmitInterviewAnswer,
     onCancelInterview,
+    onRetryQuestion,
+    onContinueInterview,
+    onStartNewSession,
+    onDeleteSession,
     isSubmittingAnswer = false,
 }: ArtifactRendererProps) {
     // 1. Runtime validation for untrusted NDJSON payload data
@@ -39,7 +51,7 @@ export function ArtifactRenderer({
         return null;
     }
 
-    // 2. Closed discriminated union switch with exhaustive type checking
+    // 2. Closed discriminated union switch with exhaustive type checking (14 Types)
     const typedArtifact = artifact as Artifact;
 
     try {
@@ -85,6 +97,43 @@ export function ArtifactRenderer({
 
             case "resume_preview":
                 return <ResumePreviewCard data={typedArtifact.data} />;
+
+            case "interview_setup_summary":
+                return (
+                    <InterviewSetupSummary
+                        data={typedArtifact.data}
+                        onStartInterview={onContinueInterview}
+                    />
+                );
+
+            case "trainer_question_card":
+                return (
+                    <TrainerQuestionCard
+                        data={typedArtifact.data}
+                        onSubmitAnswer={onSubmitInterviewAnswer}
+                        onCancelInterview={onCancelInterview}
+                        isSubmitting={isSubmittingAnswer}
+                    />
+                );
+
+            case "trainer_answer_feedback":
+                return (
+                    <TrainerAnswerFeedback
+                        data={typedArtifact.data}
+                        onRetry={onRetryQuestion}
+                        onContinue={onContinueInterview}
+                        isAdvancing={isSubmittingAnswer}
+                    />
+                );
+
+            case "trainer_interview_report":
+                return (
+                    <TrainerInterviewReport
+                        data={typedArtifact.data}
+                        onStartNewSession={onStartNewSession}
+                        onDeleteSession={onDeleteSession}
+                    />
+                );
 
             default: {
                 // Defense-in-depth: unknown artifact type returns null safely, never raw JSON/HTML

@@ -1,5 +1,5 @@
-import { ArtifactRenderer } from "../components/agent/ArtifactRenderer";
-import { Artifact } from "../types/agent";
+import { ArtifactRenderer } from "../components/agent/ArtifactRenderer.tsx";
+import type { Artifact } from "../types/agent.ts";
 
 async function runArtifactRendererTest() {
     console.log("=== ArtifactRenderer Unit & Defense-in-Depth Test Suite ===\n");

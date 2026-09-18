@@ -59,3 +59,13 @@ Index of every Antigravity prompt generated for this project. Each prompt lives 
 | 9 | 8 | `interview_feedback_card`/`interview_report_card` artifacts, streaming wiring | `Sprint_09/Day_08.md` |
 | 9 | 9 | Session-tampering/anti-fabrication hardening, cost/loop ceilings | `Sprint_09/Day_09.md` |
 | 9 | 10 | Full interview test matrix (TEST A–O), regression, Sprint 9 close-out | `Sprint_09/Day_10.md` |
+| 10 | 1 | Architecture Gate — HireLens + JARVIS audit, reuse matrix, voice/camera/session proposals | `Sprint_10/Day_01.md` |
+| 10 | 2 | Dedicated Trainer feature + navigation + universal role intelligence + setup | `Sprint_10/Day_02.md` |
+| 10 | 3 | Trainer session persistence + candidate/role/JD context assembly | `Sprint_10/Day_03.md` |
+| 10 | 4 | Adaptive trainer engine, training modes, retry loop, session memory | `Sprint_10/Day_04.md` |
+| 10 | 5 | Microphone capture, STT route + provider adapter, VAD assist | `Sprint_10/Day_05.md` |
+| 10 | 6 | AI interviewer TTS, playback queue, turn-taking, interruption | `Sprint_10/Day_06.md` |
+| 10 | 7 | Speech/delivery intelligence, grounded confidence coaching | `Sprint_10/Day_07.md` |
+| 10 | 8 | Optional camera, client-side geometric visual signals | `Sprint_10/Day_08.md` |
+| 10 | 9 | Interview Room UI, trainer artifacts, final report, state ownership | `Sprint_10/Day_09.md` |
+| 10 | 10 | Full test matrix (TEST A–AJ), security/privacy/perf, regression, close-out | `Sprint_10/Day_10.md` |

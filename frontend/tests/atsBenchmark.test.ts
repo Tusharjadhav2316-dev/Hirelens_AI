@@ -1,6 +1,6 @@
-import { analyzeResumeQuality, analyzeResumeMatch } from "../lib/atsEngine";
-import { analyzeResume } from "../lib/atsAnalyzer";
-import { Resume } from "../types/resume";
+import { analyzeResumeQuality, analyzeResumeMatch } from "../lib/atsEngine.ts";
+import { analyzeResume } from "../lib/atsAnalyzer.ts";
+import type { Resume } from "../types/resume.ts";
 
 // ----------------------------------------------------------------------------
 // BENCHMARK REGRESSION TEST SUITE FOR ATS & RESUME QUALITY SCORING ENGINES

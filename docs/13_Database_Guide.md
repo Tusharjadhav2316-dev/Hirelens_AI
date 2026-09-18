@@ -31,3 +31,32 @@ users/{uid}/agentUsage/{date}      // date = "YYYY-MM-DD"
   count: number                     // requests made today
   updatedAt: Timestamp
 ```
+
+## Sprint 10 Addendum — Interview Trainer Sessions (Second New Collection)
+
+**Change:** Sprint 10 introduces `users/{uid}/interviewTrainerSessions/{sessionId}` — the project's second new collection after Sprint 8's `agentUsage`. This **reverses Sprint 9's deliberate no-persistence decision**, with a stated cause logged in `20_Decision_Log.md`: a 10–20 minute voice interview involving microphone permission and spoken answers is materially more costly to lose to a refresh than Sprint 9's short text exchange, and reviewing past sessions is intrinsic to a *trainer* rather than a one-shot coach.
+
+**Schema:**
+```
+users/{uid}/interviewTrainerSessions/{sessionId}
+  targetRole: string
+  interviewType: "hr" | "behavioral" | "technical" | "mixed" | "role_specific"
+  difficulty: "beginner" | "intermediate" | "advanced"
+  trainingMode: "coaching" | "realistic_mock"
+  roleIntelligence: map          // RoleIntelligence output
+  questionIndex: number
+  questionsAsked: array<map>     // {id, question, category, difficulty}
+  answersGiven: array<map>       // {questionId, transcript, feedback, speechSignals, visualSignals?, retryCount}
+  voiceEnabled: boolean
+  cameraEnabled: boolean
+  status: "setup" | "in_progress" | "paused" | "completed" | "abandoned"
+  startedAt / completedAt: Timestamp
+  finalReport: map | null
+  // DELIBERATELY ABSENT: audioUrl, videoUrl, frame data, face descriptors
+```
+
+**Ownership & access:** the `users/{uid}/` path plus security rules restrict all access to the owning user — a guessed `sessionId` alone grants nothing. Writes are performed server-side via Firebase Admin from the authenticated `/api/interview/session` route (following `agentUsageService.ts`'s precedent), so session contents cannot be forged client-side.
+
+**Access patterns:** read one session by ID (Room rehydrate/resume); list most-recent-N for the owning user (landing page, bounded page size); append a turn record (PATCH); write the final report once. No cross-user or collection-group queries, so no composite index is required beyond the default.
+
+**Retention & deletion:** transcripts are candidate-authored free text and may contain personal detail. Sessions are user-deletable from the Trainer UI (implemented Day 9), which removes the document and its transcripts. Raw audio and video are never stored at any point, so deletion of the document is complete deletion of the session's content.

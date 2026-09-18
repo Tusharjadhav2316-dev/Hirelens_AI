@@ -1,7 +1,7 @@
-import { applyResumeDiff } from "../components/agent/artifacts/ResumeDiffCard";
-import { DAILY_AGENT_REQUEST_LIMIT } from "../lib/agentUsageService";
-import { Resume } from "../types/resume";
-import { defaultResume } from "../lib/defaultResume";
+import { applyResumeDiff } from "../components/agent/artifacts/ResumeDiffCard.tsx";
+import { DAILY_AGENT_REQUEST_LIMIT } from "../lib/agentUsageService.ts";
+import type { Resume } from "../types/resume.ts";
+import { defaultResume } from "../lib/defaultResume.ts";
 
 async function runAgentSafetyTestSuite() {
     console.log("=== Sprint 8 Day 9 Agent Safety & Rate Limiting Test Suite ===\n");

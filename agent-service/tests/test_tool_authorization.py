@@ -49,6 +49,7 @@ def test_job_search_agent_tools():
 
 def test_interview_coach_agent_tools():
     assert get_tool_names(interview_coach_agent) == [
+        "analyze_role",
         "evaluate_interview_answer",
         "generate_interview_report",
         "prepare_interview_questions",

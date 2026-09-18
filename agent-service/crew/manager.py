@@ -34,6 +34,7 @@ from crew.grounded_resume import generate_grounded_structured_resume
 from crew.event_bus import EventBus
 from crew import interview_manager
 from schemas.interview_session import InterviewSessionState
+from schemas.trainer_session import InterviewTrainerSession
 
 manager = Agent(
     role="HireLens Career Agent Manager",
@@ -90,7 +91,8 @@ async def process_manager_request_async(
     attachments: Optional[List[Dict[str, Any]]] = None,
     internal_jwt: Optional[str] = None,
     bus: Optional[EventBus] = None,
-    interview_session: Optional[InterviewSessionState] = None
+    interview_session: Optional[InterviewSessionState] = None,
+    trainer_session: Optional[InterviewTrainerSession] = None
 ) -> Dict[str, Any]:
     """
     Asynchronous Manager entry point.
@@ -378,6 +380,116 @@ async def process_manager_request_async(
             if bus:
                 await bus.push({"type": "tool_completed", "agent": "manager", "tool": tool_name})
                 await bus.push({"type": "error", "message": err_msg})
+                await bus.push({"type": "agent_completed", "agent": "manager"})
+                await bus.push({"type": "completed"})
+                await bus.push_end()
+            return {"status": "failed", "error": err_msg}
+
+    # Route 4t: AI Interview Trainer (Sprint 10 Multimodal & Adaptive Training Engine)
+    elif trainer_session is not None:
+        target_agent = "interview_coach_agent"
+
+        if bus:
+            await bus.push({"type": "agent_started", "agent": "manager"})
+            await bus.push({"type": "agent_started", "agent": target_agent})
+
+        try:
+            if message and len(message.strip()) > 0 and not any(k in clean for k in ["start", "restart", "new session", "begin"]):
+                # Route 4t-1: Process candidate trainer answer
+                tool_name = "evaluate_interview_answer"
+                if bus:
+                    await bus.push({"type": "tool_started", "agent": target_agent, "tool": tool_name})
+
+                proc_res = interview_manager.process_trainer_answer(
+                    session=trainer_session,
+                    answer=message.strip(),
+                    resume_text=effective_resume,
+                    job_description=effective_jd
+                )
+                session = proc_res["session"]
+                feedback = proc_res["feedback"]
+                next_q = proc_res.get("next_question")
+                is_follow_up = proc_res.get("is_follow_up", False)
+                retry_offered = proc_res.get("retry_offered", False)
+                art = proc_res["artifact"]
+
+                if bus:
+                    await bus.push({"type": "tool_completed", "agent": target_agent, "tool": tool_name})
+
+                artifacts_list = [art]
+
+                if session.status == "completed":
+                    msg_text = "Great work! You have completed your interview training session. Review your full qualitative feedback report in the Artifact Canvas."
+                elif retry_offered:
+                    msg_text = (
+                        "I've provided structured coaching on your answer. "
+                        "You may try answering this question once more to apply the coaching feedback, or advance to the next question."
+                    )
+                elif is_follow_up:
+                    msg_text = f"Thanks for your response! Let's explore that a bit deeper:\n\n**Follow-Up Question**: {next_q.question if next_q else ''}"
+                else:
+                    msg_text = f"Feedback evaluated. Moving to the next question (Difficulty: {session.difficulty.capitalize()}):\n\n**Next Question**: {next_q.question if next_q else ''}"
+
+                if bus:
+                    for a_item in artifacts_list:
+                        await bus.push({"type": "artifact", "artifact": a_item})
+                    await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
+                    await bus.push({"type": "agent_completed", "agent": target_agent})
+                    await bus.push({"type": "agent_completed", "agent": "manager"})
+                    await bus.push({"type": "completed"})
+                    await bus.push_end()
+
+                return {
+                    "status": "single_intent_delegation",
+                    "message": msg_text,
+                    "artifacts": artifacts_list,
+                    "trainer_session": session.model_dump()
+                }
+            else:
+                # Route 4t-0: Present initial or active trainer question
+                pres = interview_manager.present_trainer_question(
+                    session=trainer_session,
+                    resume_text=effective_resume,
+                    job_description=effective_jd
+                )
+                session = pres["session"]
+                active_q = pres.get("active_question")
+
+                art = {
+                    "type": "trainer_question_card",
+                    "status": "completed",
+                    "data": {
+                        "session_id": session.session_id,
+                        "target_role": session.target_role,
+                        "question_index": session.question_index,
+                        "active_question": active_q.model_dump() if active_q else None,
+                        "is_follow_up": False,
+                        "difficulty": session.difficulty,
+                        "training_mode": session.training_mode
+                    }
+                }
+                msg_text = f"Welcome to your AI Interview Training for {session.target_role} ({session.training_mode.replace('_', ' ').capitalize()} mode).\n\n**Question 1**: {active_q.question if active_q else ''}"
+
+                if bus:
+                    await bus.push({"type": "artifact", "artifact": art})
+                    await bus.push({"type": "message_delta", "agent": target_agent, "text": msg_text})
+                    await bus.push({"type": "agent_completed", "agent": target_agent})
+                    await bus.push({"type": "agent_completed", "agent": "manager"})
+                    await bus.push({"type": "completed"})
+                    await bus.push_end()
+
+                return {
+                    "status": "single_intent_delegation",
+                    "message": msg_text,
+                    "artifacts": [art],
+                    "trainer_session": session.model_dump()
+                }
+
+        except Exception as e:
+            err_msg = f"Interview trainer error: {str(e)}"
+            if bus:
+                await bus.push({"type": "error", "message": err_msg})
+                await bus.push({"type": "agent_completed", "agent": target_agent})
                 await bus.push({"type": "agent_completed", "agent": "manager"})
                 await bus.push({"type": "completed"})
                 await bus.push_end()
@@ -710,7 +822,9 @@ def process_manager_request(
     message: str,
     resume_text: str,
     job_description: Optional[str] = None,
-    internal_jwt: Optional[str] = None
+    internal_jwt: Optional[str] = None,
+    interview_session: Optional[InterviewSessionState] = None,
+    trainer_session: Optional[InterviewTrainerSession] = None
 ) -> Dict[str, Any]:
     """Sync wrapper preserving Day 2/Day 5 API compatibility."""
     return asyncio.run(process_manager_request_async(
@@ -718,5 +832,7 @@ def process_manager_request(
         resume_text=resume_text,
         job_description=job_description,
         internal_jwt=internal_jwt,
-        bus=None
+        bus=None,
+        interview_session=interview_session,
+        trainer_session=trainer_session
     ))

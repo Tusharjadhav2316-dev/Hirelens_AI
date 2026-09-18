@@ -3,8 +3,8 @@ import {
     SECTION_BASE_PROMPTS,
     OPTIMIZER_MODE_PROMPTS,
     HALLUCINATION_GUARDRAIL,
-    OptimizerMode,
-} from "../lib/promptTemplates";
+    type OptimizerMode,
+} from "../lib/promptTemplates.ts";
 
 // ----------------------------------------------------------------------------
 // AUTOMATED & QA SAFETY TEST SUITE FOR RESUME OPTIMIZER PROMPT BUILDER

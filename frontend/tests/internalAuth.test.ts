@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { verifyInternalJwt, verifyAuthOrInternalJwt } from "../lib/verifyInternalJwt";
+import { verifyInternalJwt, verifyAuthOrInternalJwt } from "../lib/verifyInternalJwt.ts";
 
 console.log("=== Internal JWT & Dual Auth Test Suite ===\n");
 

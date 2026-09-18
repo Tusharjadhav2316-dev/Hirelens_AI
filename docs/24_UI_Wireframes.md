@@ -395,3 +395,165 @@ The Active Question State and Feedback State render full-width in the existing m
 ### Design Notes
 - No new page route. Everything above renders inside the existing Sprint 8 Artifact Canvas via 2 new artifact renderers (`InterviewFeedbackCard.tsx`, `InterviewReportCard.tsx`) plus an extension to the existing `InterviewQuestionCard.tsx`.
 - Uses the existing HireLens design system exclusively — same card/border/spacing tokens as `ATSScoreCard.tsx` and `ResumeDiffCard.tsx`.
+
+---
+
+## Sprint 10 — AI Interview Trainer (Dedicated Feature)
+
+> A dedicated route tree (`/dashboard/interview-trainer`), **not** an Artifact Canvas artifact — see `20_Decision_Log.md` for why a media-owning, stateful, full-viewport experience cannot live inside the stateless artifact renderer model. Uses the existing HireLens design system and theme only; this is **not** the Sprint 11 premium redesign.
+
+### Navigation
+New `Sidebar.tsx` entry, placed after "AI Career Agent" (the existing primary entry) so the two AI-first experiences sit together:
+```
+[*] AI Career Agent        <- existing primary
+[*] AI Interview Trainer   <- NEW dedicated feature
+    Dashboard
+    AI Career Coach
+    Resume Builder
+    ... (all existing entries unchanged)
+```
+
+### Landing Page (`/dashboard/interview-trainer`)
+```
++--------------------------------------------------------------+
+|  AI Interview Trainer                                         |
+|  Practice real interviews. Get coached. Get better.           |
++--------------------------------------------------------------+
+|                  [ Start New Interview ]                      |
++--------------------------------------------------------------+
+|  Past Sessions                                                 |
+|  Business Analyst - Mixed - Intermediate    12 Sep   [View]    |
+|  ML Engineer - Technical - Advanced          8 Sep   [View]    |
+|  (empty state: "No practice sessions yet. Start your first     |
+|   interview and I'll coach you through it.")                   |
++--------------------------------------------------------------+
+```
+
+### Setup (`/dashboard/interview-trainer/setup`)
+```
++--------------------------------------------------------------+
+|  Set Up Your Interview                                        |
++--------------------------------------------------------------+
+|  Target Role  *required                                        |
+|  [ Business Analyst____________________ ]                      |
+|  Any role works - Teacher, Financial Analyst, ML Engineer...   |
+|                                                                |
+|  Resume:  [x] Use my current resume  (from ResumeContext)      |
+|  Job Description:  [ Paste or upload - optional ]              |
+|     Without a JD, I'll infer the role's likely focus areas     |
+|     and tell you which parts are inferred.                     |
+|                                                                |
+|  Interview Type:  ( )HR ( )Behavioral ( )Technical (*)Mixed    |
+|                   ( )Role-specific                             |
+|  Difficulty:      ( )Beginner (*)Intermediate ( )Advanced      |
+|  Training Mode:   (*)Coaching  ( )Realistic Mock               |
+|     Coaching = feedback after each answer.                     |
+|     Realistic Mock = feedback saved for the final report.      |
+|                                                                |
+|  Microphone  [ Enable ]   Required for voice mode              |
+|              You can also type your answers instead.          |
+|  Camera      [ Enable ]   Optional - recommended               |
+|              Helps you practice on-screen presence.           |
+|              Your camera feed never leaves your device.       |
++--------------------------------------------------------------+
+|                         [ Continue ]                           |
++--------------------------------------------------------------+
+```
+
+### Interview Strategy Preview (`interview_setup_summary` artifact)
+```
++--------------------------------------------------------------+
+|  Interview Plan - Business Analyst                            |
+|  Basis: inferred from role (no job description provided)      |
++--------------------------------------------------------------+
+|  Likely focus areas:                                          |
+|  - Requirements gathering        - Stakeholder management      |
+|  - Analytical/case reasoning     - Data interpretation (SQL)   |
+|  - Communication                                               |
+|                                                                |
+|  Assumptions I'm making:                                       |
+|  - Mid-level individual-contributor scope                      |
+|  - Business-facing rather than deeply technical                 |
+|  Add a job description to make this more precise.              |
++--------------------------------------------------------------+
+|              [ Adjust Setup ]   [ Start Interview ]            |
++--------------------------------------------------------------+
+```
+
+### Interview Room (`/dashboard/interview-trainer/room`) — Desktop
+```
++--------------------------------------------------------------+
+| AI Interview Trainer      Business Analyst      Q 3 / 10       |
++--------------------------------------------------------------+
+|                                                                |
+|                    AI INTERVIEWER                              |
+|                 ( ( ( voice state ) ) )                        |
+|                  * AI is speaking...                           |
+|                                                                |
+|   "Tell me about a time you had to gather requirements         |
+|    from stakeholders who disagreed with each other."           |
+|                                                                |
+| +----------------------+   +-------------------------------+   |
+| | Your camera          |   | Progress  # # # o o o o o o o |   |
+| |   [ live preview ]   |   | Mode: Coaching                |   |
+| |   (optional - off    |   | Difficulty: Intermediate      |   |
+| |    shows a placeholder)  | Mic: READY   Camera: ACTIVE   |   |
+| +----------------------+   +-------------------------------+   |
+|                                                                |
+|         MIC LISTENING...  00:42     [ * recording ]            |
+|                                                                |
+|   [ I'm Done ]  [ Type instead ]  [ Pause ]  [ End Interview ] |
++--------------------------------------------------------------+
+```
+`[ I'm Done ]` is the **primary turn-ending control** (see `20_Decision_Log.md` — VAD is only an assist). After a sustained silence the UI shows a non-blocking "Still there? Press I'm Done when you've finished." prompt rather than auto-cutting the answer.
+
+### Voice / Media State Indicators (client-local state)
+| State | Indicator |
+|---|---|
+| AI THINKING | Interviewer orb pulses slowly, "Preparing your next question" |
+| AI SPEAKING | Orb animates with playback; `[ Skip ]` available |
+| LISTENING | Red recording dot + live timer + mic level meter |
+| PROCESSING ANSWER | "Transcribing and reviewing your answer..." |
+| COACHING | Feedback card slides into view |
+| PAUSED | Dimmed room, mic released, `[ Resume ]` |
+| ERROR | Inline message + recovery action (retry / type instead) |
+| MIC OFF / REQUESTING / BLOCKED | Explicit banner with a "Type your answers instead" escape hatch |
+| CAMERA OFF / BLOCKED | Placeholder tile; interview continues normally |
+
+### Answer Feedback (`trainer_answer_feedback` artifact)
+```
++--------------------------------------------------------------+
+|  Feedback on your answer                                      |
++--------------------------------------------------------------+
+|  What worked                                                   |
+|  + You named a concrete stakeholder conflict                    |
+|  + Clear sequence of events                                     |
+|                                                                 |
+|  What to improve                                                |
+|  ! Your own decision-making role wasn't clear                    |
+|  ! No outcome or resolution stated                              |
+|                                                                 |
+|  Try this structure                                             |
+|  Situation -> Your responsibility -> Action -> Result -> Learning|
+|                                                                 |
+|  How you delivered it                                           |
+|  - 2 min 14 s, about 165 words/min (good pace)                   |
+|  - "um" x 11, "like" x 6 - try a short silent pause instead     |
+|  - 3 long pauses mid-sentence                                    |
+|  (Camera: your face left the frame twice)                        |
++--------------------------------------------------------------+
+|        [ Try This Answer Again ]     [ Next Question ]          |
++--------------------------------------------------------------+
+```
+Delivery observations are stated as **countable facts**, never as inferred confidence or emotion. The camera line appears only if camera was enabled.
+
+### Final Report (`trainer_interview_report` artifact)
+Sections rendered in order: Session overview · Content performance (qualitative labels) · Communication (with observed numbers) · Visual presence (**omitted entirely if camera was off** — no "not measured" filler) · Strengths · Improvement areas · Question-by-question review (collapsible) · Top 3 priorities · Practice plan for your next session · Confidence coaching. Footer carries the mandatory note: coaching recommendations, not measurements, and not a hiring prediction. Actions: `[ Practice Weakest Question ]` `[ New Interview, Same Role ]` `[ Try Advanced Difficulty ]` `[ Back to Trainer ]`.
+
+### Responsive Behaviour
+| Breakpoint | Layout |
+|---|---|
+| Desktop (>=1024px) | As drawn: interviewer centre, camera tile + progress panel side by side |
+| Tablet (640–1023px) | Interviewer centre, camera tile and progress stack below it |
+| Mobile (<640px) | Single column: question text first, controls fixed to the bottom, camera preview collapsed to a small floating thumbnail (tappable to expand). `[ I'm Done ]` is a full-width primary button — the most important target on the screen |
+Mobile keeps voice as the primary input precisely because typing a long interview answer on a phone is the worst case for the text fallback.

@@ -174,6 +174,59 @@ export interface InterviewReportArtifactData {
   note?: string;
 }
 
+// Sprint 10 AI Interview Trainer Schemas
+export interface CategoryWeightItem {
+  category: string;
+  weight: number;
+}
+
+export interface RoleIntelligenceData {
+  target_role: string;
+  role_summary: string;
+  likely_competencies: string[];
+  interview_categories: CategoryWeightItem[];
+  technical_balance: "mostly_technical" | "balanced" | "mostly_non_technical";
+  suggested_topics: string[];
+  evidence_basis: "job_description" | "role_inference" | "role_inference_plus_resume";
+  assumptions: string[];
+}
+
+export interface TrainerAnswerRecord {
+  question_id: string;
+  answer: string;
+  feedback?: Record<string, any>;
+  speech_signals?: Record<string, any>;
+  visual_signals?: Record<string, any>;
+  retry_count?: number;
+  submitted_at?: string;
+}
+
+export interface InterviewTrainerSession {
+  session_id: string;
+  target_role: string;
+  interview_type: "hr" | "behavioral" | "technical" | "mixed" | "role_specific";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  training_mode: "coaching" | "realistic_mock";
+  role_intelligence?: RoleIntelligenceData | null;
+  question_index: number;
+  questions_asked: QuestionAskedRecord[];
+  answers_given: TrainerAnswerRecord[];
+  voice_enabled: boolean;
+  camera_enabled: boolean;
+  status: "setup" | "in_progress" | "paused" | "completed" | "abandoned";
+  started_at?: string;
+  completed_at?: string;
+  final_report?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type TrainerSessionPatchAction =
+  | { action: "append_turn"; question: QuestionAskedRecord; answer_record: TrainerAnswerRecord }
+  | { action: "update_status"; status: "setup" | "in_progress" | "paused" | "completed" | "abandoned" }
+  | { action: "save_report"; final_report: Record<string, any> };
+
+
 // 7. Task Progress Payload
 export interface TaskProgressArtifactData {
   label: string;
@@ -187,7 +240,66 @@ export interface ResumeArtifactData {
   summaryNote?: string;
 }
 
-// Closed Discriminated Union for Artifacts (10 Types)
+// 9. Interview Setup Summary Payload
+export interface InterviewSetupSummaryArtifactData {
+  role_intelligence: RoleIntelligenceData;
+  training_mode: "coaching" | "realistic_mock";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  voice_enabled: boolean;
+  camera_enabled: boolean;
+}
+
+// 10. Trainer Question Card Payload
+export interface TrainerQuestionArtifactData {
+  session_id: string;
+  target_role: string;
+  question_index: number;
+  active_question?: QuestionAskedRecord | null;
+  is_follow_up?: boolean;
+  difficulty: string;
+  training_mode: "coaching" | "realistic_mock";
+}
+
+// 11. Trainer Answer Feedback Payload
+export interface TrainerAnswerFeedbackArtifactData {
+  session_id: string;
+  feedback: Record<string, any>;
+  speech_signals?: Record<string, any> | null;
+  visual_signals?: Record<string, any> | null;
+  retry_offered?: boolean;
+  is_follow_up?: boolean;
+  next_question?: QuestionAskedRecord | null;
+  difficulty: string;
+  training_mode: "coaching" | "realistic_mock";
+}
+
+// 12. Trainer Interview Report Payload
+export interface TrainerInterviewReportArtifactData {
+  session_id: string;
+  target_role: string;
+  training_mode: "coaching" | "realistic_mock";
+  questions_asked: number;
+  readiness_by_category: Record<string, "Strong" | "Moderate" | "Needs Improvement">;
+  strengths: string[];
+  improvement_areas: string[];
+  priority_topics: string[];
+  communication_summary?: {
+    avg_words_per_minute?: number;
+    total_fillers?: number;
+    pace_assessment?: string;
+    actionable_tip?: string;
+  };
+  visual_summary?: {
+    camera_enabled: boolean;
+    face_detected_ratio?: number;
+    out_of_frame_events?: number;
+    framing_note?: string;
+  };
+  completed_at?: string;
+  note?: string;
+}
+
+// Closed Discriminated Union for Artifacts (14 Types)
 export type ATSScoreArtifact = { id?: string; title?: string; type: "ats_score_card"; data: ATSScoreArtifactData };
 export type ResumeDiffArtifact = { id?: string; title?: string; type: "resume_diff"; data: ResumeDiffArtifactData };
 export type JobResultArtifact = { id?: string; title?: string; type: "job_result_card"; data: JobResultArtifactData };
@@ -198,6 +310,10 @@ export type InterviewFeedbackArtifact = { id?: string; title?: string; type: "in
 export type InterviewReportArtifact = { id?: string; title?: string; type: "interview_report_card"; data: InterviewReportArtifactData };
 export type TaskProgressArtifact = { id?: string; title?: string; type: "task_progress"; data: TaskProgressArtifactData };
 export type ResumeArtifact = { id?: string; title?: string; type: "resume_preview"; data: ResumeArtifactData };
+export type InterviewSetupSummaryArtifact = { id?: string; title?: string; type: "interview_setup_summary"; data: InterviewSetupSummaryArtifactData };
+export type TrainerQuestionArtifact = { id?: string; title?: string; type: "trainer_question_card"; data: TrainerQuestionArtifactData };
+export type TrainerAnswerFeedbackArtifact = { id?: string; title?: string; type: "trainer_answer_feedback"; data: TrainerAnswerFeedbackArtifactData };
+export type TrainerInterviewReportArtifact = { id?: string; title?: string; type: "trainer_interview_report"; data: TrainerInterviewReportArtifactData };
 
 export type Artifact =
   | ATSScoreArtifact
@@ -209,7 +325,11 @@ export type Artifact =
   | InterviewFeedbackArtifact
   | InterviewReportArtifact
   | TaskProgressArtifact
-  | ResumeArtifact;
+  | ResumeArtifact
+  | InterviewSetupSummaryArtifact
+  | TrainerQuestionArtifact
+  | TrainerAnswerFeedbackArtifact
+  | TrainerInterviewReportArtifact;
 
 export interface AgentResponse {
   output: string;

@@ -53,6 +53,7 @@ async def chat_endpoint(
         if body.attachments:
             attachments = [a.model_dump() for a in body.attachments]
         interview_session = body.interview_session
+        trainer_session = body.trainer_session
     else:
         try:
             raw_json = await request.json()
@@ -73,6 +74,11 @@ async def chat_endpoint(
             if raw_sess and isinstance(raw_sess, dict):
                 from schemas.interview_session import InterviewSessionState
                 interview_session = InterviewSessionState(**raw_sess)
+
+            raw_trainer_sess = raw_json.get("trainer_session")
+            if raw_trainer_sess and isinstance(raw_trainer_sess, dict):
+                from schemas.trainer_session import InterviewTrainerSession
+                trainer_session = InterviewTrainerSession(**raw_trainer_sess)
         except Exception:
             pass
 
@@ -90,7 +96,8 @@ async def chat_endpoint(
             attachments=attachments,
             internal_jwt=internal_jwt,
             bus=bus,
-            interview_session=interview_session
+            interview_session=interview_session,
+            trainer_session=trainer_session
         )
     )
 

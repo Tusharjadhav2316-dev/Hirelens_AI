@@ -22,6 +22,14 @@ Sprint 8's close-out (below) correctly retired the "Sprint 9" title, since Sprin
 
 This re-activation is logged the same way the Sprint 8 Scope Directive was logged (Project Rule 9 — no silent scope creep): see `20_Decision_Log.md`, ADR "Sprint 9 Reactivation." Sprint 9 is scoped narrowly to closing these three gaps plus the mock-interview/adaptive-follow-up/report capabilities the original brief always intended for this title — it does not redo anything Sprint 8 already delivered correctly.
 
+## ⚠️ Sprint 10 Redefinition (Roadmap Amendment)
+
+Slot 10 was originally **Career Roadmap & Learning Engine**. The product owner has issued an explicit directive redefining Sprint 10 as **AI Interview Trainer — Dedicated Multimodal, Voice-First Interview Training Experience**. Career Roadmap & Learning Engine is **displaced, not cancelled** — it is listed as slot 10b and remains fully in the roadmap, unscheduled.
+
+Rationale for the redefinition (logged per Project Rule 9, no silent scope creep — see `20_Decision_Log.md`, ADR "Sprint 10 Redefinition"): Sprint 9 delivered a working text-based interview coach, and repository audit confirms it is complete and operational. The directive is to now make interview training a **first-class, dedicated product feature** with its own navigation entry and workspace, and to add voice (and optional camera) interaction — which HireLens has **zero** existing capability for (confirmed: no `getUserMedia`, no `MediaRecorder`, no STT/TTS provider, no media dependencies in `package.json`). This is a substantially larger and more architecturally novel body of work than the learning-path generator, and it builds directly on Sprint 9's just-completed foundation while that context is fresh.
+
+**Explicit boundary:** Sprint 10 does **not** absorb the Career Roadmap / Learning Engine. Sprint 10's final trainer report surfaces practice recommendations for the *next interview session* only — it does not generate study plans, map learning resources, or build a chronological skill-acquisition roadmap. That remains slot 10b's scope.
+
 ## Sprint Overview
 
 | # | Title | Est. Days | Difficulty | Status |
@@ -35,7 +43,8 @@ This re-activation is logged the same way the Sprint 8 Scope Directive was logge
 | 7 | Job Search & Application Tracker | 7 | Medium-Hard | ⚠️ Partially Superseded — job search delivered in Sprint 8; application tracker remains ⬜ Not Started |
 | 8 | CrewAI Multi-Agent System & AI-First Agent Workspace | 10 | Hard | ✅ Complete |
 | 9 | AI Interview Coach — Mock Interview Sessions, Adaptive Follow-Up & Feedback | 10 | Hard | ✅ Complete |
-| 10 | Career Roadmap & Learning Engine | 6 | Medium | ⬜ Not Started |
+| 10 | **AI Interview Trainer — Dedicated Multimodal, Voice-First Interview Training** | 10 | Hard | 🟦 Planned (this document) — see "Sprint 10 Redefinition" note below |
+| 10b | Career Roadmap & Learning Engine (displaced from slot 10) | 6 | Medium | ⬜ Not Started |
 | 11 | Premium UI/UX Redesign | 8 | Medium-Hard | ⬜ Not Started |
 | 12 | Premium SaaS Features & Payments | 7 | Hard | ⬜ Not Started |
 | 13 | Testing, Performance, Security & Optimization | 6 | Medium-Hard | ⬜ Not Started |
@@ -73,8 +82,13 @@ This re-activation is logged the same way the Sprint 8 Scope Directive was logge
 
 ## Next Sprint (Upcoming)
 
-### Sprint 10 — Career Roadmap & Learning Engine ⬜ Not Started
-Skill gap analysis extended into a personalized learning path generator. Identifies missing skills against a target role, maps them to recommended resources (courses, projects, certifications), and generates a chronological study plan. Architecture: extends existing `jdMatcher.ts` skill-gap detection; learning resource suggestions via AI prompting (no external learning API dependency by default — can be added if a suitable free tier is identified).
+### Sprint 10 — AI Interview Trainer: Dedicated Multimodal, Voice-First Interview Training 🟦 Planned — 0% Progress
+**Goal:** Promote interview training from a capability inside the AI Career Agent into a dedicated, first-class HireLens feature with its own navigation entry (`/dashboard/interview-trainer`) and dedicated Interview Room workspace, and add voice-first interaction (AI interviewer speaks via TTS; candidate answers by microphone via STT) plus optional camera-based presence/framing coaching. Universal role support — any user-entered target role, no hardcoded "Software Engineer." Reuses Sprint 9's `interview_manager.py` session engine and the existing Firebase/internal-JWT security boundary rather than rebuilding them. Voice and camera technology patterns are adapted from the JARVIS reference repository — see `16_JARVIS_Reuse_Analysis.md`.
+**Architecture decision:** Voice runs through two new authenticated Next.js routes (`/api/interview/stt`, `/api/interview/tts`) behind a `SpeechProviderAdapter` abstraction; all media capture stays client-side in React hooks; no raw audio or video is ever persisted. Manual "I'm Done" turn control is the primary, reliable path with energy-based VAD as an assist. Full rationale in `20_Decision_Log.md` and `Sprint_10/Day_01.md` (Architecture Gate).
+**See:** `Sprint_10/Day_01.md` through `Day_10.md`, plus `16_JARVIS_Reuse_Analysis.md`
+
+### Sprint 10b — Career Roadmap & Learning Engine ⬜ Not Started (displaced from slot 10)
+Skill gap analysis extended into a personalized learning path generator. Identifies missing skills against a target role, maps them to recommended resources (courses, projects, certifications), and generates a chronological study plan. Architecture: extends existing `jdMatcher.ts` skill-gap detection; learning resource suggestions via AI prompting (no external learning API dependency by default — can be added if a suitable free tier is identified). **Explicitly not absorbed by Sprint 10** — see the Sprint 10 Redefinition note above.
 
 ---
 
@@ -89,8 +103,11 @@ See "Completed Sprints" above and `Sprint_08/` for full detail.
 ### Sprint 9 — AI Interview Coach: Mock Interview Sessions, Adaptive Follow-Up & Feedback (Complete)
 See "Completed Sprints" above and `Sprint_09/` for full detail.
 
-### Sprint 10 — Career Roadmap & Learning Engine
-See "Next Sprint" above for full detail.
+### Sprint 10 — AI Interview Trainer: Dedicated Multimodal, Voice-First Interview Training
+See "Next Sprint" above and `Sprint_10/` for full detail. Redefined from the original slot-10 scope per the Sprint 10 Redefinition note above.
+
+### Sprint 10b — Career Roadmap & Learning Engine (displaced)
+See "Next Sprint" above. Still fully in the roadmap; displaced from slot 10, not cancelled.
 
 ### Sprint 11 — Premium UI/UX Redesign
 Full design system refresh: design tokens, component library, accessibility pass (WCAG AA), responsive layout improvements, animation polish. This is the sprint where the "AI Career Operating System" visual identity is locked in. Constraint: no feature work in this sprint — UI only.

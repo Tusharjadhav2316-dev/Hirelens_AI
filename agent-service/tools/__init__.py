@@ -14,7 +14,7 @@ from tools.optimizer_tools import optimize_resume_section
 from tools.cover_letter_tools import generate_cover_letter
 from tools.job_search_tools import search_jobs
 from tools.skill_gap_tools import analyze_skill_gap
-from tools.interview_tools import prepare_interview_questions, evaluate_interview_answer, generate_interview_report
+from tools.interview_tools import prepare_interview_questions, evaluate_interview_answer, generate_interview_report, analyze_role
 
 # Aliases for agent definitions & tool authorization test compatibility
 get_resume_tool = get_resume
@@ -27,6 +27,7 @@ analyze_skill_gap_tool = analyze_skill_gap
 prepare_interview_questions_tool = prepare_interview_questions
 evaluate_interview_answer_tool = evaluate_interview_answer
 generate_interview_report_tool = generate_interview_report
+analyze_role_tool = analyze_role
 
 __all__ = [
     "get_resume",
@@ -49,4 +50,6 @@ __all__ = [
     "evaluate_interview_answer_tool",
     "generate_interview_report",
     "generate_interview_report_tool",
+    "analyze_role",
+    "analyze_role_tool",
 ]

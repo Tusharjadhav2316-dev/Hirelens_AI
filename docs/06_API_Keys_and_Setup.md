@@ -68,3 +68,12 @@ Sprint 1, Day 1 searches the codebase for SDK imports and API-key-shaped environ
 
 ## Adding a New API to This Doc
 Every entry must include all fields in the template above. No exceptions — half-documented APIs cause the most painful debugging sessions. Do not add a speculative entry for a service the project doesn't use yet just because a future sprint might need one — add it when that sprint actually confirms the need.
+
+### Speech Provider — STT & TTS (Sprint 10)
+- **Purpose:** Backs the AI Interview Trainer's speech-to-text (candidate answers) and text-to-speech (AI interviewer voice) via the `SpeechProviderAdapter`.
+- **Status:** **Not yet provisioned as of Sprint 10 planning.** The Trainer ships with a `NullSpeechProvider` that returns an explicit "voice not configured" state and falls back to text mode — it never fabricates audio or transcripts. The reference provider identified during the JARVIS audit is Sarvam AI (`api.sarvam.ai`, `saaras:v3` for STT / `bulbul:v3` for TTS), which JARVIS uses successfully in production.
+- **Env variable names:** `SPEECH_PROVIDER` (e.g. `sarvam` | `null`), `SPEECH_PROVIDER_API_KEY`.
+- **Security:** Server-side only — the key must never reach the browser. Both voice routes call `verifyAuth(req)` before any provider call; an unauthenticated voice endpoint would be an unmetered path to a paid API (the exact flaw found in JARVIS's routes — see `16_JARVIS_Reuse_Analysis.md` §5).
+- **Cost control:** Per-request audio size/duration caps and TTS text-length caps, plus per-session call ceilings and the existing per-user daily `agentUsage` counter.
+- **Alternatives:** Browser Web Speech API (no key, no cost, but unreliable cross-browser `SpeechRecognition` support) — documented as a future fallback in `25_Backlog.md`.
+- **How to test in isolation:** call `/api/interview/tts` without a Firebase token and confirm `401`; with a valid token and `SPEECH_PROVIDER=null`, confirm a clean "not configured" response rather than an error.

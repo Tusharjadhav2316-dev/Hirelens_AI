@@ -135,3 +135,69 @@ Sprint 8's C5 (above) instructed testers to "submit an answer and request feedba
 - Whether a generated follow-up question is the *single best* possible follow-up — inherently subjective; verified via manual QA (TEST G)
 - The qualitative accuracy of report readiness labels — a coaching judgment, not a deterministic computation; spot-checked via manual QA (TEST I), never asserted exactly
 - Multi-device/cross-session interview resumption — explicitly out of scope for Sprint 9 MVP (see `20_Decision_Log.md`)
+
+---
+
+## Sprint 10 — AI Interview Trainer Testing
+
+### Test Matrix
+| Layer | Type | Runner | What it covers |
+|---|---|---|---|
+| `agent-service/tests/test_role_intelligence.py` | Unit | `pytest` | `analyze_role` works for arbitrary roles (Teacher, Financial Analyst, Consultant) — never defaults to "Software Engineer"; `evidence_basis`/`assumptions` correctly set when no JD is supplied |
+| `agent-service/tests/test_trainer_session.py` | Unit | `pytest` | Trainer session lifecycle incl. pause/resume/abandon; duration and question ceilings; retry capped at 1 per question |
+| `agent-service/tests/test_speech_signals_schema.py` | Unit | `pytest` | `SpeechSignals` `extra="forbid"` rejects any injected emotion/confidence/pitch field |
+| `agent-service/tests/test_visual_signals_schema.py` | Unit | `pytest` | `VisualSignals` `extra="forbid"` rejects any expression/emotion/identity/age/gender field |
+| `agent-service/tests/test_trainer_report_no_score.py` | Unit | `pytest` | Report schema has no numeric score of any kind (extends Sprint 9's equivalent) |
+| `agent-service/tests/test_trainer_anti_fabrication.py` | Unit | `pytest` | `analyze_role` + all trainer prompts carry `INTERVIEW_GUARDRAIL`; no fabricated employers/projects/skills |
+| `agent-service/tests/test_transcript_injection.py` | Unit | `pytest` | A transcript containing "ignore your instructions" is treated as data (new injection surface in Sprint 10) |
+| `frontend/tests/interviewSttRoute.test.ts` | Unit | `npx tsx` | `/api/interview/stt` returns 401 without a valid Firebase token; enforces audio size cap; `NullSpeechProvider` returns explicit not-configured |
+| `frontend/tests/interviewTtsRoute.test.ts` | Unit | `npx tsx` | Same for `/api/interview/tts`; enforces text-length cap |
+| `frontend/tests/useInterviewMicrophone.test.ts` | Unit | `npx tsx` | Permission state machine transitions; denial path offers typing fallback; no module-global leakage between instances |
+| `frontend/tests/useInterviewerVoice.test.ts` | Unit | `npx tsx` | Playback queue never double-plays; cancellation stops audio; playback after session end is suppressed |
+| `frontend/tests/useInterviewCamera.test.ts` | Unit | `npx tsx` | Permission/denial/disconnect handling; stream fully released on unmount |
+| `frontend/tests/trainerArtifacts.test.ts` | Unit | `npx tsx` | All 4 new artifact renderers render valid data and fail safe on malformed data; `ArtifactRenderer` switch remains exhaustive at 14 types |
+| Manual QA (TEST A–AJ) | Manual | Browser | See below |
+| Full regression | Manual + automated | `npm run build` + all Sprint 8/9 suites | All 7 agents, Sprint 9's in-Agent text interview flow, and every existing feature must be unaffected |
+
+### Manual QA — TEST A through TEST AJ
+| Test | Scenario | Pass Criterion |
+|---|---|---|
+| A | Software Engineer interview | Role-appropriate questions; no generic filler |
+| B | Business Analyst interview | Questions emphasise requirements/stakeholders/case reasoning — **not** coding |
+| C | ML Engineer interview | Questions emphasise modelling/evaluation/deployment |
+| D | Arbitrary role ("Museum Curator") | Works; plausible role-appropriate categories; no "Software Engineer" leakage |
+| E | Resume only, no JD | `evidence_basis="role_inference"`; assumptions shown explicitly |
+| F | Resume + JD | `evidence_basis="job_description"`; questions trace to JD requirements |
+| G–J | HR / Behavioral / Technical / Mixed types | Each visibly weights its category |
+| K | Project-specific question | References a project actually in the resume; no invented details |
+| L | Weak answer | Concrete, actionable improvements — not "good answer" |
+| M | Strong answer | Genuine strengths identified; no invented extras; difficulty steps up |
+| N | Incomplete answer | Follow-up targets the specific gap |
+| O | Very long answer (>3 min) | Recording hard-stops at the cap; answer preserved; length noted in feedback |
+| P | Heavy filler words | Counted accurately and coached with a concrete alternative |
+| Q | Frequent long pauses | Counted; coaching is about structuring thought, **not** about confidence |
+| R | Retry after coaching | Retry offered (max 1/question); no fake "improvement %" claimed |
+| S | Adaptive follow-up | Fires per the documented rule; capped at 1 per question |
+| T | AI interviewer speaks | Natural pacing; no duplicate/overlapping playback; `[Skip]` works |
+| U | Answer entirely by voice | Full turn completes without typing |
+| V | Typing fallback | Available at any time; produces identical evaluation quality |
+| W | Deny microphone permission | Clear explanation + immediate typing fallback; interview still usable |
+| X | Disconnect microphone mid-answer | Graceful error, answer-so-far preserved, retry/type offered |
+| Y | Enable camera | Live preview; ACTIVE indicator visible at all times |
+| Z | Disable camera mid-session | Session continues; visual section omitted from report |
+| AA | Deny camera permission | Interview proceeds normally; camera never re-prompts aggressively |
+| AB | Move out of frame | Out-of-frame event counted; coaching is about framing only — **no** emotion/attention inference |
+| AC | Complete a full interview | Reaches `completed`; report produced |
+| AD | Final trainer report | All sections present; visual section absent if camera was off; no numeric score; carries the not-a-measurement note |
+| AE | Another user attempts to access the session | Impossible — `users/{uid}/` path + rules; session ID alone grants nothing |
+| AF | Malicious text injected in resume | Treated as data; no guardrail bypass; no system-prompt leakage |
+| AG | Malicious instructions in JD | Same |
+| AH | Malicious instructions spoken aloud | Same — transcript treated as data |
+| AI | Probe for fabricated facts ("ask about my time at Google" when absent) | Trainer states the resume doesn't show it; asks rather than inventing |
+| AJ | Exercise all pre-Sprint-10 features | Resume Builder, ATS, Optimizer, Cover Letter, Career Coach, Job Search, Agent Workspace, Sprint 9 text interview all behave identically |
+
+### What Is NOT Tested Automatically (by design)
+- Subjective naturalness of TTS voice and question phrasing — manual only (TEST T)
+- Real-world STT accuracy across accents/noise — provider-dependent; spot-checked manually, never asserted
+- VAD silence-threshold tuning — device- and environment-dependent; this is precisely why manual `[I'm Done]` is the primary control rather than VAD
+- Camera framing guidance precision — coarse by design; only presence/out-of-frame are asserted

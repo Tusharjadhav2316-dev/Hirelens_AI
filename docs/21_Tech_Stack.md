@@ -126,3 +126,32 @@
 | New artifact types | `interview_feedback_card`, `interview_report_card` (10 total artifact types after Sprint 9); `interview_question_card` extended with optional session/active-question fields | `Sprint_09/Day_07.md` |
 | Streaming events | Zero new event types — interview moments reuse the existing 9 `AgentEvent` types | `Sprint_09/Day_02.md` Decision Log entry |
 | New UI | Answer input + Submit wired into `InterviewQuestionCard.tsx`; new `InterviewFeedbackCard.tsx`, `InterviewReportCard.tsx` | `Sprint_09/Day_07.md` |
+
+## Sprint 10 Additions (Planned)
+
+> Voice/camera technology patterns derived from the JARVIS reference repository — see `16_JARVIS_Reuse_Analysis.md` for the full audit and reuse matrix. **Pre-Sprint-10 HireLens has zero audio/video capability** (verified: no `getUserMedia`, no `MediaRecorder`, no STT/TTS provider, no media dependency in `package.json`).
+
+### New Frontend Capability
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| Dedicated Trainer route | `frontend/app/dashboard/interview-trainer/` (landing / setup / room) + new `Sidebar.tsx` entry | `Sprint_10/Day_02.md` |
+| Microphone capture | Browser `navigator.mediaDevices.getUserMedia({audio:true})` + `MediaRecorder` in a `useInterviewMicrophone` hook (JARVIS pattern, module globals removed) | `Sprint_10/Day_05.md` |
+| Voice Activity Detection (assist only) | `AudioContext` + `AnalyserNode` RMS energy + silence threshold — **built from scratch; no VAD exists in JARVIS** | `Sprint_10/Day_05.md` |
+| Interviewer audio playback | `new Audio(data:audio/wav;base64,...)` with a sequential queue + cancellation in `useInterviewerVoice` (JARVIS pattern, adapted) | `Sprint_10/Day_06.md` |
+| Optional camera | `getUserMedia({video:true})` in `useInterviewCamera` (JARVIS `FaceScanner.tsx` capture pattern) | `Sprint_10/Day_08.md` |
+| Client-side face detection | `face-api.js` — **detection/bounding-box only**; models served from `/public/models`; inference entirely in-browser, frames never transmitted. Expression, age, gender, and descriptor/recognition features deliberately unused | `Sprint_10/Day_08.md`, `16_JARVIS_Reuse_Analysis.md` §4 |
+| New dependency | `face-api.js` (first vision dependency in HireLens; bundle-size impact assessed Day 8) | `Sprint_10/Day_08.md` |
+
+### New Backend Capability
+| Layer | Technology | Confirmed Via |
+|---|---|---|
+| STT | `frontend/app/api/interview/stt/route.ts` — authenticated Next.js route behind `SpeechProviderAdapter`; ships `SarvamSpeechProvider` (`api.sarvam.ai/speech-to-text`, `saaras:v3`) + `NullSpeechProvider`. **Batch, not streaming.** | `Sprint_10/Day_05.md` |
+| TTS | `frontend/app/api/interview/tts/route.ts` — same pattern; Sarvam `bulbul:v3`, configurable speaker | `Sprint_10/Day_06.md` |
+| Provider abstraction | `SpeechProviderAdapter` interface, mirroring Sprint 8's proven `JobProviderAdapter` pattern | `Sprint_10/Day_01.md` |
+| Auth on voice routes | Existing `verifyAuth(req)` — a mandatory correction, since JARVIS's equivalent routes have **no auth at all** | `16_JARVIS_Reuse_Analysis.md` §5 |
+| Role intelligence | New `analyze_role` tool in `agent-service/tools/interview_tools.py`; prompt-driven, no role taxonomy | `Sprint_10/Day_02.md` |
+| Session engine | **Reuses** Sprint 9's `agent-service/crew/interview_manager.py`, extended — not rebuilt | `Sprint_10/Day_04.md` |
+| New Firestore collection | `users/{uid}/interviewTrainerSessions/{sessionId}` — text + derived signals only, never audio/video | `Sprint_10/Day_03.md` Decision Log entry |
+| Agents | **Unchanged at 7** (1 Manager + 6 specialized). No new CrewAI agents. | `Sprint_10/Day_04.md` Decision Log entry |
+| Streaming events | **Unchanged at 9 types.** Voice/media state is client-local React state, not server events. | `Sprint_10/Day_09.md` Decision Log entry |
+| New env variables | `SPEECH_PROVIDER_API_KEY`, `SPEECH_PROVIDER` (server-side only; never exposed to the browser) | `Sprint_10/Day_05.md` |

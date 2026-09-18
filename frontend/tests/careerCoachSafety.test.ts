@@ -4,12 +4,12 @@ import {
     buildJDContextBlock,
     trimConversationHistory,
     hasResumeContent,
-    ChatMessage,
-    ATSContextInput
-} from "../lib/careerCoachService";
-import { CAREER_COACH_SYSTEM_PROMPT, CAREER_COACH_MODEL_PARAMS, HALLUCINATION_GUARDRAIL } from "../lib/promptTemplates";
-import { defaultResume } from "../lib/defaultResume";
-import { Resume } from "../types/resume";
+    type ChatMessage,
+    type ATSContextInput
+} from "../lib/careerCoachService.ts";
+import { CAREER_COACH_SYSTEM_PROMPT, CAREER_COACH_MODEL_PARAMS, HALLUCINATION_GUARDRAIL } from "../lib/promptTemplates.ts";
+import { defaultResume } from "../lib/defaultResume.ts";
+import type { Resume } from "../types/resume.ts";
 
 console.log("=== Career Coach Safety Test Suite ===\n");
 

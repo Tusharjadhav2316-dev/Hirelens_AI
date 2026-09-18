@@ -182,3 +182,43 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Full personalized study-roadmap generation from interview weaknesses | Sprint 9 surfaces priority topics in the report only; the complete learning-path/resource-mapping engine belongs to Sprint 10 | Sprint 10 (Career Roadmap & Learning Engine) |
 | Company-specific interview preparation (real company process/culture data) | No verified company-data source exists — same boundary already logged for the Company Research Agent in Sprint 8 | Unscheduled |
 | Retrofitting real CrewAI `Crew.kickoff()` hierarchical delegation across all 7 agents | Out of Sprint 9's stated scope; the deterministic router is working in production | Unscheduled — would need its own dedicated sprint and justification |
+
+## Sprint 10 Items — AI Interview Trainer
+
+| Feature | Priority | Status | Sprint/Day | Notes |
+|---|---|---|---|---|
+| Architecture Gate: HireLens + JARVIS audit, reuse matrix | Critical | Not Started | Sprint 10, Day 1 | Gate — no implementation until reviewed |
+| Dedicated Trainer route tree + Sidebar entry | High | Not Started | Sprint 10, Day 2 | `/dashboard/interview-trainer`; not an artifact |
+| `analyze_role` tool + `RoleIntelligence` schema | High | Not Started | Sprint 10, Day 2 | Prompt-driven; no role taxonomy; replaces the hardcoded "Software Engineer" fallback |
+| Interview setup + consent flow | High | Not Started | Sprint 10, Day 2 | Separate mic/camera consent |
+| `interviewTrainerSessions` Firestore collection | High | Not Started | Sprint 10, Day 3 | Text + derived signals only; never audio/video |
+| Trainer session engine extensions to `interview_manager.py` | High | Not Started | Sprint 10, Day 4 | Reuse Sprint 9 engine; training modes, retry, pause/resume |
+| `useInterviewMicrophone` hook + permission state machine | High | Not Started | Sprint 10, Day 5 | JARVIS pattern, module globals removed |
+| `/api/interview/stt` + `SpeechProviderAdapter` | High | Not Started | Sprint 10, Day 5 | **Auth added** vs. JARVIS; batch STT |
+| VAD assist (`AudioContext` + `AnalyserNode`) | Medium | Not Started | Sprint 10, Day 5 | Built from scratch; assist only, never load-bearing |
+| `/api/interview/tts` + `useInterviewerVoice` playback queue | High | Not Started | Sprint 10, Day 6 | JARVIS queue/cancellation pattern adapted |
+| Turn-taking + interruption/skip handling | High | Not Started | Sprint 10, Day 6 | Manual `[I'm Done]` primary |
+| `analyze_speech_signals` + `SpeechSignals` schema | High | Not Started | Sprint 10, Day 7 | Transcript + timing only; `extra="forbid"` |
+| Confidence coaching (grounded, non-numeric) | Medium | Not Started | Sprint 10, Day 7 | Observations → guidance; never a score |
+| `useInterviewCamera` + client-side `face-api.js` detection | Medium | Not Started | Sprint 10, Day 8 | Frames never leave the browser; detection only |
+| `VisualSignals` schema + framing coaching | Medium | Not Started | Sprint 10, Day 8 | Geometric signals only; `extra="forbid"` |
+| Interview Room UI + 4 new artifact renderers | High | Not Started | Sprint 10, Day 9 | Extends Canvas union to 14 types |
+| Final trainer report | High | Not Started | Sprint 10, Day 9 | Visual section omitted when camera off |
+| Full test matrix TEST A–AJ + regression | Critical | Not Started | Sprint 10, Day 10 | 36 manual scenarios |
+
+## Deferred From Sprint 10 (Candidates for Future Sprints)
+
+| Feature | Reason Deferred | Target |
+|---|---|---|
+| Career Roadmap & Learning Engine | Displaced from slot 10 by the Trainer; explicitly not absorbed | Slot 10b |
+| Streaming / partial STT transcripts | JARVIS is batch-only; streaming needs a new provider integration + realtime transport for a latency gain that matters less in long-monologue interviews | Revisit if Day 10 perf testing shows unacceptable latency |
+| Raw audio recording + playback self-review | Genuinely useful, but needs its own retention, deletion, storage-rules and consent design | Unscheduled |
+| Video recording / replay | Same, with materially higher privacy and storage cost | Unscheduled |
+| Numeric confidence or interview score | Requires a defensible documented measurement system that does not exist; also risks ATS-score confusion | Likely never in this form |
+| Facial expression / emotion analysis | Explicitly rejected as unsupportable inference — see `16_JARVIS_Reuse_Analysis.md` §4 | Rejected, not deferred |
+| Face recognition / biometric identity | JARVIS uses it for login; out of scope and an unnecessary privacy liability | Rejected |
+| Wake-word activation | Interview turns are explicit; adds nothing | Rejected |
+| Browser Web Speech API as primary STT/TTS | Unreliable cross-browser `SpeechRecognition` support | Retained as a possible zero-cost fallback provider behind the existing adapter |
+| Multi-language interviews | JARVIS hardcodes `en-IN`; Sprint 10 makes locale configurable but ships English only | Unscheduled |
+| Cross-session progress analytics ("are you improving?") | Persistence makes it possible, but trend analysis is its own design problem | Unscheduled |
+| Retrofitting real CrewAI `Crew.kickoff()` delegation | Out of scope; deterministic router works in production | Unscheduled — needs its own sprint |

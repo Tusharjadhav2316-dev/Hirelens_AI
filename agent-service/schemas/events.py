@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, List, Union, Literal
 from pydantic import BaseModel, Field
 from schemas.interview_session import InterviewSessionState
+from schemas.trainer_session import InterviewTrainerSession
 
 class AgentStartedEvent(BaseModel):
     type: Literal["agent_started"] = "agent_started"
@@ -67,4 +68,5 @@ class ChatRequest(BaseModel):
     job_description: Optional[str] = Field(default=None, description="Target job description")
     attachments: Optional[List[AttachmentItem]] = Field(default_factory=list, description="Uploaded supporting career documents")
     interview_session: Optional[InterviewSessionState] = Field(default=None, description="Active mock interview session state")
+    trainer_session: Optional[InterviewTrainerSession] = Field(default=None, description="Active AI interview trainer session state")
 
