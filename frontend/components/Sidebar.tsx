@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     // Sidebar is fully expanded if it's explicitly opened on mobile, or hovered on desktop
-    const isExpanded = isOpen || isHovered;
+    const isExpanded = true;
 
     return (
         <>
@@ -64,9 +64,7 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
                     isOpen ? "translate-x-0 w-64 shadow-2xl" : "-translate-x-full w-64",
                     // Desktop Classes
                     "lg:translate-x-0",
-                    isHovered
-                        ? "lg:w-64 lg:shadow-[4px_0_24px_rgba(0,0,0,0.02)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.2)]"
-                        : "lg:w-16 lg:shadow-none"
+                    "lg:w-64 lg:shadow-[4px_0_24px_rgba(0,0,0,0.02)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.2)]"
                 )}
                 aria-expanded={isExpanded}
             >

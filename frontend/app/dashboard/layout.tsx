@@ -15,7 +15,7 @@ export default function DashboardLayout({
 
     return (
         <ProtectedRoute>
-            <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
+            <div className="flex h-screen overflow-hidden bg-[#f7f8fc] dark:bg-[#0d1025]">
                 {/* Fixed Sidebar */}
                 <Sidebar
                     isOpen={isSidebarOpen}
@@ -23,12 +23,12 @@ export default function DashboardLayout({
                 />
 
                 {/* Main Content Area - Contains lg:pl-16 to permanently reserve space for the icon-only sidebar without shifting when it expands */}
-                <div className="flex-1 flex flex-col w-full h-full overflow-hidden lg:pl-16 transition-all duration-300">
+                <div className="flex-1 flex flex-col w-full h-full overflow-hidden lg:pl-64 transition-all duration-300">
                     {/* Top Navbar */}
                     <Navbar onMenuClick={() => setIsSidebarOpen(true)} />
 
                     {/* Scrollable Page Content */}
-                    <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8">
+                    <main className="flex-1 overflow-y-auto bg-[#f7f8fc] dark:bg-[#0d1025] p-4 sm:p-6 lg:p-8">
                         <ResumeProvider>
                             <div className="mx-auto max-w-7xl h-full">
                                 {children}

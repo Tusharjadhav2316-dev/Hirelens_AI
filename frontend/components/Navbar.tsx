@@ -35,7 +35,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     };
 
     return (
-        <header className="h-16 bg-white/80 backdrop-blur-md dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 z-10 w-full transition-colors duration-300">
+        <header className="h-[72px] bg-white/90 backdrop-blur-md dark:bg-[#141833]/90 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between px-4 sm:px-8 z-10 w-full transition-colors duration-300">
             {/* Mobile Menu Button - Left Side */}
             <div className="flex items-center lg:hidden">
                 <button
@@ -46,6 +46,15 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                     <span className="sr-only">Toggle sidebar</span>
                     <Menu className="h-6 w-6" aria-hidden="true" />
                 </button>
+            </div>
+
+            {/* Search and actions */}
+            <div className="hidden md:flex items-center w-full max-w-md">
+                <label className="relative w-full">
+                    <span className="sr-only">Search HireLens</span>
+                    <input className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-20 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:focus:ring-indigo-500/20" placeholder="Search for jobs, skills, tools, or ask HireLens..." />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-400 dark:border-white/10">Ctrl K</span>
+                </label>
             </div>
 
             {/* Right Side - Actions & Profile */}

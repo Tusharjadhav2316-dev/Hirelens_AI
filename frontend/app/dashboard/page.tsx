@@ -36,10 +36,10 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Page Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Welcome back, {user?.displayName?.split(" ")[0] || "User"}
                 </h1>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
