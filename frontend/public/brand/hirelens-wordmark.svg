@@ -1,0 +1,16 @@
+<svg width="160" height="40" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hl-grad-wm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+  </defs>
+  <!-- Mark -->
+  <rect x="0" y="4" width="32" height="32" rx="8" fill="url(#hl-grad-wm)" />
+  <circle cx="16" cy="20" r="7" stroke="white" stroke-width="2" fill="none" opacity="0.9" />
+  <circle cx="16" cy="20" r="3.5" fill="white" />
+  <!-- Text -->
+  <text x="42" y="26" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="currentColor">
+    Hire<tspan fill="#6366F1">Lens</tspan>
+  </text>
+</svg>

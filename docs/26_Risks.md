@@ -333,3 +333,8 @@
 **Impact:** Voice-first experience unavailable.
 **Mitigation:** `NullSpeechProvider` returns an explicit "voice not configured" state and the Trainer runs in text mode with an honest explanation — it never fabricates transcripts or silently fails. Mid-session provider failure preserves the answer and offers retry or typing. Same honest-degradation pattern as Sprint 8's `NullJobProvider`.
 **Priority:** Medium
+
+---
+
+## Sprint 11 Specific Risks
+Full risk register in `Sprint_11/10_Risk_Register_UI.md` (20 risks with impact/probability/mitigation/verification). Headline risks: global token retune and shared-shell edits both carry all-route regression exposure (R-01, R-02); the path of least resistance to "match the screenshot" is fabricating data for metrics with no real source, explicitly forbidden and guarded by a mandatory empty-state requirement on every day (R-03); deleting `JDMatcherPanel` to match the Job Search reference would remove working functionality, explicitly forbidden (R-04); the two conflicting ATS Analyzer designs risk wasted rework if not resolved before Day 08 (R-06); the landing hero illustration risks a stock-photo substitution if not generated per its documented brief (R-07); a named testimonial and unverified "500K+" claim risk shipping unverified marketing content (R-17).

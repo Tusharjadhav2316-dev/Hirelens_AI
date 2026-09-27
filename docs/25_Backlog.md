@@ -222,3 +222,6 @@ Update **Status** as work progresses (Not Started → In Progress → Done → B
 | Multi-language interviews | JARVIS hardcodes `en-IN`; Sprint 10 makes locale configurable but ships English only | Unscheduled |
 | Cross-session progress analytics ("are you improving?") | Persistence makes it possible, but trend analysis is its own design problem | Unscheduled |
 | Retrofitting real CrewAI `Crew.kickoff()` delegation | Out of scope; deterministic router works in production | Unscheduled — needs its own sprint |
+
+## Sprint 11 Items — Finalized UI Implementation
+Full backlog in `Sprint_11/00_Sprint_11_Master_Plan.md` (day map) and each `Sprint_11/Day_NN_.../Day_NN.md`. Headline deferred items (explicitly out of this sprint, per `Sprint_11/07_Future_Sprint_Boundaries.md`): Job Search provider integration, Career Roadmap page, Payments/Premium (Stripe, entitlements), Application Tracker data model, notification backend, global search execution, real company-logo assets, Cover Letters/Career Coach/Resume History/Profile Settings finalized designs (request from product owner if they exist), Dashboard Activity Overview real timeseries + charting-library decision.

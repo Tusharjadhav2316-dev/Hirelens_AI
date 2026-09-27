@@ -45,7 +45,7 @@ Rationale for the redefinition (logged per Project Rule 9, no silent scope creep
 | 9 | AI Interview Coach — Mock Interview Sessions, Adaptive Follow-Up & Feedback | 10 | Hard | ✅ Complete |
 | 10 | **AI Interview Trainer — Dedicated Multimodal, Voice-First Interview Training** | 10 | Hard | 🟦 Planned (this document) — see "Sprint 10 Redefinition" note below |
 | 10b | Career Roadmap & Learning Engine (displaced from slot 10) | 6 | Medium | ⬜ Not Started |
-| 11 | Premium UI/UX Redesign | 8 | Medium-Hard | ⬜ Not Started |
+| 11 | Finalized UI Implementation (Premium UI/UX Redesign) | 14 | Medium-Hard | 🟦 Planned (this document) |
 | 12 | Premium SaaS Features & Payments | 7 | Hard | ⬜ Not Started |
 | 13 | Testing, Performance, Security & Optimization | 6 | Medium-Hard | ⬜ Not Started |
 | 14 | Production Launch & Deployment | 6 | Hard | ⬜ Not Started |
@@ -109,7 +109,12 @@ See "Next Sprint" above and `Sprint_10/` for full detail. Redefined from the ori
 ### Sprint 10b — Career Roadmap & Learning Engine (displaced)
 See "Next Sprint" above. Still fully in the roadmap; displaced from slot 10, not cancelled.
 
-### Sprint 11 — Premium UI/UX Redesign
+### Sprint 11 — Finalized UI Implementation (Premium UI/UX Redesign) 🟦 Planned
+**Goal:** Bring the existing application's pages to the already-approved finalized UI reference, page by page, without redesigning creatively and without breaking existing functionality. Confirmed via repository audit: no landing page exists (`app/page.tsx` is a redirect stub), design tokens are the unmodified shadcn greyscale default, no fonts are loaded, and `public/` contains only default Next.js scaffold assets — so this sprint is a genuine from-near-zero visual implementation, not a retouch.
+**Scope:** 14 implementation days, one page/design per day: Day 01 design-system foundation + shell, Day 02 Landing, Day 03 Sign In, Day 04 Sign Up, Day 05 Dashboard, Day 06 AI Career Agent, Day 07 Resume Builder, Day 08 ATS Analyzer, Day 09 Job Search (UI layer only — see `Sprint_11/05_Job_Search_Boundary.md`), Day 10 Interview Trainer, Days 11–14 Cover Letters/Career Coach/Resume History/Profile Settings (design-system alignment only — no reference exists for these four).
+**Explicit boundary:** does not implement the Job Search engine, Career Roadmap, or Payments/Premium — these remain future sprints; the UI merely renders their entry points honestly (empty/coming-soon states), per `Sprint_11/07_Future_Sprint_Boundaries.md`.
+**See:** `Sprint_11/00_Sprint_11_Master_Plan.md` and `Sprint_11/Day_01_.../` through `Day_14_.../`.
+
 Full design system refresh: design tokens, component library, accessibility pass (WCAG AA), responsive layout improvements, animation polish. This is the sprint where the "AI Career Operating System" visual identity is locked in. Constraint: no feature work in this sprint — UI only.
 
 ### Sprint 12 — Premium SaaS Features & Payments

@@ -2,227 +2,127 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import {
-    LayoutDashboard,
-    FileEdit,
-    Search,
-    Target,
-    Mail,
-    History,
-    Settings,
-    MessageSquare,
-    Sparkles,
-    Headphones,
-    X
+  LayoutDashboard,
+  Sparkles,
+  FileEdit,
+  ShieldCheck,
+  Briefcase,
+  Mail,
+  Video,
+  GraduationCap,
+  History,
+  Settings,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import UpgradeCard from "./shell/UpgradeCard";
+import SidebarUserBlock from "./shell/SidebarUserBlock";
 
 interface SidebarProps {
-    isOpen?: boolean;
-    setIsOpen?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+  setIsOpen?: (isOpen: boolean) => void;
 }
 
+// Exactly 10 navigation items matching the 13-page reference PDF
 const navigationItems = [
-    { name: "AI Career Agent", href: "/dashboard/agent", icon: Sparkles, isPrimary: true },
-    { name: "AI Interview Trainer", href: "/dashboard/interview-trainer", icon: Headphones },
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "AI Career Coach", href: "/dashboard/career-coach", icon: MessageSquare },
-    { name: "Resume Builder", href: "/dashboard/builder", icon: FileEdit },
-    { name: "Resume Analyzer", href: "/dashboard/resume-analyzer", icon: Search },
-    { name: "Job Matcher", href: "/dashboard/job-matcher", icon: Target },
-    { name: "Cover Letter", href: "/dashboard/cover-letter", icon: Mail },
-    { name: "Resume History", href: "/dashboard/history", icon: History },
+  { name: "Home", href: "/dashboard", icon: LayoutDashboard },
+  { name: "AI Agent", href: "/dashboard/agent", icon: Sparkles },
+  { name: "Resume Builder", href: "/dashboard/builder", icon: FileEdit },
+  { name: "ATS Analyzer", href: "/dashboard/resume-analyzer", icon: ShieldCheck },
+  { name: "Job Search", href: "/dashboard/job-matcher", icon: Briefcase },
+  { name: "Cover Letters", href: "/dashboard/cover-letter", icon: Mail },
+  { name: "Interview Trainer", href: "/dashboard/interview-trainer", icon: Video },
+  { name: "Career Coach", href: "/dashboard/career-coach", icon: GraduationCap },
+  { name: "Resume History", href: "/dashboard/history", icon: History },
+  { name: "Profile Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-
 export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
-    const pathname = usePathname();
-    const [isHovered, setIsHovered] = useState(false);
+  const pathname = usePathname();
 
-    // Sidebar is fully expanded if it's explicitly opened on mobile, or hovered on desktop
-    const isExpanded = isOpen || isHovered;
+  return (
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
+          onClick={() => setIsOpen?.(false)}
+          aria-hidden="true"
+        />
+      )}
 
-    return (
-        <>
-            {/* Mobile Backdrop */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
-                    onClick={() => setIsOpen?.(false)}
-                    aria-hidden="true"
-                />
-            )}
+      {/* Sidebar Container */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {/* Logo Lockup */}
+        <div className="flex h-16 items-center justify-between px-5 border-b border-slate-100 dark:border-slate-800/80">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-90"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-xs shadow-indigo-500/30">
+              <span className="font-extrabold text-sm tracking-tight">HL</span>
+            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+              Hire<span className="text-indigo-600 dark:text-indigo-400">Lens</span>
+            </span>
+          </Link>
 
-            {/* Sidebar Container */}
-            <aside
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
+          {/* Mobile Close Button */}
+          <button
+            onClick={() => setIsOpen?.(false)}
+            className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation List */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname?.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsOpen?.(false)}
                 className={cn(
-                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out",
-                    // Mobile Drawer Classes
-                    isOpen ? "translate-x-0 w-64 shadow-2xl" : "-translate-x-full w-64",
-                    // Desktop Classes
-                    "lg:translate-x-0",
-                    isHovered
-                        ? "lg:w-64 lg:shadow-[4px_0_24px_rgba(0,0,0,0.02)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.2)]"
-                        : "lg:w-16 lg:shadow-none"
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150",
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50"
                 )}
-                aria-expanded={isExpanded}
-            >
-                {/* Logo Area */}
-                <div className={cn(
-                    "flex h-16 items-center border-b border-slate-200 dark:border-slate-800 transition-all duration-300",
-                    isExpanded ? "justify-between px-4" : "justify-center px-4 lg:px-0"
-                )}>
-                    <Link
-                        href="/dashboard/agent"
-                        className={cn(
-                            "flex items-center gap-3 transition-opacity hover:opacity-90 overflow-hidden",
-                            !isExpanded && "lg:justify-center lg:w-full"
-                        )}
-                    >
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm ring-1 ring-blue-600/20">
-                            HL
-                        </div>
-                        <span
-                            className={cn(
-                                "text-xl font-bold tracking-tight text-gray-900 dark:text-white whitespace-nowrap transition-all duration-300",
-                                !isExpanded ? "lg:hidden lg:opacity-0 lg:w-0" : "opacity-100"
-                            )}
-                        >
-                            HireLens <span className="text-blue-600 dark:text-blue-500">AI</span>
-                        </span>
-                    </Link>
+              >
+                <Icon
+                  className={cn(
+                    "w-4.5 h-4.5 flex-shrink-0 transition-colors",
+                    isActive
+                      ? "text-indigo-600 dark:text-indigo-400"
+                      : "text-slate-400 dark:text-slate-500"
+                  )}
+                />
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
 
-                    {/* Mobile Close Button */}
-                    <button
-                        onClick={() => setIsOpen?.(false)}
-                        className={cn(
-                            "p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 rounded-md transition-opacity",
-                            isExpanded ? "lg:hidden" : "hidden"
-                        )}
-                    >
-                        <span className="sr-only">Close sidebar</span>
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+        {/* Upgrade Card */}
+        <UpgradeCard />
 
-                {/* Navigation Links */}
-                <div className={cn(
-                    "flex-1 overflow-y-auto overflow-x-hidden py-6 flex flex-col gap-1 custom-scrollbar",
-                    isExpanded ? "px-3" : "px-3 lg:px-2"
-                )}>
-                    <div
-                        className={cn(
-                            "text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 transition-all duration-300 whitespace-nowrap",
-                            isExpanded ? "px-3 opacity-100" : "lg:opacity-0 lg:h-0 lg:mb-0 lg:overflow-hidden px-3"
-                        )}
-                    >
-                        Menu
-                    </div>
-                    {navigationItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        const isPrimary = (item as any).isPrimary;
-
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                title={!isExpanded ? item.name : undefined}
-                                className={cn(
-                                    "flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
-                                    isExpanded ? "px-3" : "px-3 lg:px-0 lg:justify-center",
-                                    isActive
-                                        ? isPrimary
-                                            ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/20 dark:bg-blue-600 dark:text-white"
-                                            : "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                                        : isPrimary
-                                            ? "bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-semibold border border-blue-200/60 dark:border-blue-800/40"
-                                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-white"
-                                )}
-                            >
-                                <item.icon
-                                    className={cn(
-                                        "w-5 h-5 flex-shrink-0 transition-colors",
-                                        isActive
-                                            ? isPrimary
-                                                ? "text-white"
-                                                : "text-blue-600 dark:text-blue-400"
-                                            : isPrimary
-                                                ? "text-blue-600 dark:text-blue-400"
-                                                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-                                    )}
-                                />
-                                <span
-                                    className={cn(
-                                        "whitespace-nowrap transition-all duration-300",
-                                        !isExpanded ? "lg:opacity-0 lg:w-0 lg:overflow-hidden" : "opacity-100"
-                                    )}
-                                >
-                                    {item.name}
-                                </span>
-                            </Link>
-                        );
-                    })}
-
-                    <div
-                        className={cn(
-                            "mt-8 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 transition-all duration-300 whitespace-nowrap",
-                            isExpanded ? "px-3 opacity-100" : "lg:opacity-0 lg:h-0 lg:mt-0 lg:mb-0 lg:overflow-hidden px-3"
-                        )}
-                    >
-                        Preferences
-                    </div>
-                    <Link
-                        href="/dashboard/settings"
-                        title={!isExpanded ? "Profile Settings" : undefined}
-                        className={cn(
-                            "flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
-                            isExpanded ? "px-3" : "px-3 lg:px-0 lg:justify-center",
-                            pathname === "/dashboard/settings"
-                                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-white"
-                        )}
-                    >
-                        <Settings
-                            className={cn(
-                                "w-5 h-5 flex-shrink-0 transition-colors",
-                                pathname === "/dashboard/settings"
-                                    ? "text-blue-600 dark:text-blue-400"
-                                    : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-                            )}
-                        />
-                        <span
-                            className={cn(
-                                "whitespace-nowrap transition-all duration-300",
-                                !isExpanded ? "lg:opacity-0 lg:w-0 lg:overflow-hidden" : "opacity-100"
-                            )}
-                        >
-                            Profile Settings
-                        </span>
-                    </Link>
-                </div>
-
-                {/* Bottom Upgrade/Quota Section */}
-                <div
-                    className={cn(
-                        "p-4 border-t border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-hidden",
-                        !isExpanded ? "lg:h-0 lg:p-0 lg:opacity-0 lg:border-none" : "h-auto opacity-100"
-                    )}
-                >
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-slate-800 dark:to-slate-800/50 rounded-xl p-4 border border-blue-100/50 dark:border-slate-700 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-xl -mr-4 -mt-4 mix-blend-multiply dark:mix-blend-plus-lighter" />
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 relative z-10 whitespace-nowrap">Pro Plan</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 relative z-10 whitespace-normal line-clamp-2">
-                            Unlock advanced AI keywords and unlimited ATS scans.
-                        </p>
-                        <button className="w-full text-xs font-semibold bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-slate-700 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors shadow-sm relative z-10">
-                            Upgrade
-                        </button>
-                    </div>
-                </div>
-            </aside>
-        </>
-    );
+        {/* User Footer Profile */}
+        <SidebarUserBlock />
+      </aside>
+    </>
+  );
 }

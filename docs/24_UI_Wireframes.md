@@ -557,3 +557,8 @@ Sections rendered in order: Session overview · Content performance (qualitative
 | Tablet (640–1023px) | Interviewer centre, camera tile and progress stack below it |
 | Mobile (<640px) | Single column: question text first, controls fixed to the bottom, camera preview collapsed to a small floating thumbnail (tappable to expand). `[ I'm Done ]` is a full-width primary button — the most important target on the screen |
 Mobile keeps voice as the primary input precisely because typing a long interview answer on a phone is the worst case for the text fallback.
+
+---
+
+## Sprint 11 — Finalized UI Implementation
+Sprint 11 implements a **finalized, externally-approved UI reference** (a supplied PDF), not a Claude-authored wireframe — so the visual specification for this sprint lives in `Sprint_11/01_Reference_Page_Inventory.md` (full page-by-page audit of all 10 reference artboards) rather than as ASCII wireframes in this file. Supporting documents: `Sprint_11/08_Design_System_Extraction.md` (colors/type/spacing/shape/depth/icons/motion extracted from the reference), `Sprint_11/04_Asset_and_Image_Requirements.md` (every missing asset and the landing hero's full image-generation brief), and `Sprint_11/03_Reference_Conflicts.md` (ambiguities and conflicts requiring product-owner confirmation before implementation).
