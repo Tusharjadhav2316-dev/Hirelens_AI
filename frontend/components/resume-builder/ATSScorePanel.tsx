@@ -160,7 +160,7 @@ export default function ATSScorePanel({ result }: ATSScorePanelProps) {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Section Breakdown</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     {sections.map((sec, idx) => (
-                        <div key={idx} className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center">
+                        <div key={idx} className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center">
                             <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{sec.name}</span>
                             <span className={`text-sm font-bold ${getColorClass(sec.score)}`}>{sec.score}%</span>
                         </div>

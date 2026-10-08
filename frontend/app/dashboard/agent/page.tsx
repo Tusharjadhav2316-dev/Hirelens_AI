@@ -271,16 +271,16 @@ export default function AgentWorkspacePage() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-slate-100 dark:bg-slate-950 p-4 sm:p-6 overflow-hidden">
+        <div className="h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
             {/* Desktop 2-Column Layout / Mobile Tabs */}
-            <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
+            <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5">
                 {/* Mobile Tab Controls */}
-                <div className="flex md:hidden items-center p-1 bg-slate-200 dark:bg-slate-800 rounded-xl mb-2 flex-shrink-0">
+                <div className="flex md:hidden items-center p-1 bg-slate-200/80 dark:bg-slate-800/80 rounded-xl mb-2 flex-shrink-0">
                     <button
                         onClick={() => setActiveTab("chat")}
                         className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
                             activeTab === "chat"
-                                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
+                                ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
                                 : "text-slate-600 dark:text-slate-400"
                         }`}
                     >
@@ -291,21 +291,21 @@ export default function AgentWorkspacePage() {
                         onClick={() => setActiveTab("canvas")}
                         className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all relative ${
                             activeTab === "canvas"
-                                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs"
+                                ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
                                 : "text-slate-600 dark:text-slate-400"
                         }`}
                     >
                         <Layers className="w-4 h-4" />
                         Artifact Canvas
                         {artifacts.length > 0 && (
-                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                         )}
                     </button>
                 </div>
 
                 {/* Left Pane: Conversation Interface */}
                 <div
-                    className={`flex-1 min-h-0 min-w-0 ${
+                    className={`w-full md:w-[45%] lg:w-[44%] shrink-0 min-h-0 min-w-0 ${
                         activeTab === "chat" ? "block" : "hidden md:block"
                     }`}
                 >
@@ -324,7 +324,7 @@ export default function AgentWorkspacePage() {
 
                 {/* Right Pane: Generative UI Artifact Canvas */}
                 <div
-                    className={`flex-1 min-h-0 min-w-0 ${
+                    className={`w-full md:w-[55%] lg:w-[56%] flex-1 min-h-0 min-w-0 ${
                         activeTab === "canvas" ? "block" : "hidden md:block"
                     }`}
                 >
@@ -348,3 +348,4 @@ export default function AgentWorkspacePage() {
         </div>
     );
 }
+

@@ -175,7 +175,7 @@ export default function ExperienceForm({ data, onChange, jobDescription }: Props
                                 value={item.description}
                                 onChange={(e) => handleChange(item.id, "description", e.target.value)}
                                 rows={4}
-                                className="w-full flex rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 transition-colors"
+                                className="w-full flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 dark:placeholder:text-slate-500 transition-colors custom-scrollbar"
                                 placeholder={"• Developed scalable web applications...\n• Increased performance by 15%..."}
                             />
                             <p className="text-[11px] text-slate-500">Briefly describe the project impact and your contribution. Use bullet points.</p>

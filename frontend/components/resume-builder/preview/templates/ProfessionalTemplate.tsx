@@ -1,5 +1,5 @@
 import { Resume } from "@/types/resume";
-import { Mail, Phone, MapPin, Globe, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Linkedin, Github } from "lucide-react";
 import { ATS_SECTION_ORDER, AtsSection } from "@/lib/atsOrder";
 
 export default function ProfessionalTemplate({ resume }: { resume: Resume }) {
@@ -175,6 +175,12 @@ export default function ProfessionalTemplate({ resume }: { resume: Resume }) {
                         <div className="flex items-center gap-1">
                             <Linkedin className="w-4 h-4" />
                             <span>{resume.personalInfo.linkedinUrl.replace('https://', '')}</span>
+                        </div>
+                    )}
+                    {resume.personalInfo.githubUrl && (
+                        <div className="flex items-center gap-1">
+                            <Github className="w-4 h-4" />
+                            <span>{resume.personalInfo.githubUrl.replace('https://', '')}</span>
                         </div>
                     )}
                     {resume.personalInfo.portfolioUrl && (

@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar";
 import TopHeader from "@/components/shell/TopHeader";
 import { ResumeProvider } from "@/contexts/ResumeContext";
+import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
   children,
@@ -12,15 +13,26 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <ProtectedRoute>
       <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
         {/* Fixed Sidebar */}
-        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+        />
 
-        {/* Main Content Area - Placed with lg:pl-64 to accommodate the standard fixed sidebar */}
-        <div className="flex-1 flex flex-col w-full h-full overflow-hidden lg:pl-64 transition-all duration-300">
+        {/* Main Content Area - Synchronously offsets by 256px (lg:pl-64) or 80px (lg:pl-20) */}
+        <div
+          className={cn(
+            "flex-1 flex flex-col w-full h-full overflow-hidden transition-all duration-200 ease-in-out",
+            isCollapsed ? "lg:pl-20" : "lg:pl-64"
+          )}
+        >
           {/* Top Header */}
           <TopHeader onMenuClick={() => setIsSidebarOpen(true)} />
 
@@ -37,3 +49,4 @@ export default function DashboardLayout({
     </ProtectedRoute>
   );
 }
+

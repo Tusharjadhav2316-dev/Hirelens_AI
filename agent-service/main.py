@@ -34,6 +34,7 @@ async def chat_endpoint(
     jd = None
     attachments = []
     interview_session = None
+    trainer_session = None
 
     if body:
         msg = body.message or ""

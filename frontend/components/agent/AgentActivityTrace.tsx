@@ -154,32 +154,34 @@ export default function AgentActivityTrace({ steps, isComplete = false, error = 
     }
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs transition-all duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4">
+        <div className="bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs transition-all duration-200">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800/80 mb-3">
                 <div className="flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                        Agent Execution Trace
+                    <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <Cpu className="w-3.5 h-3.5" />
+                    </div>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                        Live Agent Trace
                     </h3>
                 </div>
                 <div className="flex items-center gap-1.5">
                     {isComplete ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
-                            <CheckCircle2 className="w-3 h-3" /> Complete
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Complete
                         </span>
                     ) : error ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-800/50">
-                            <AlertCircle className="w-3 h-3" /> Error
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40">
+                            <AlertCircle className="w-3 h-3 text-rose-600" /> Error
                         </span>
                     ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50 animate-pulse">
-                            <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" /> Processing...
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                            <Loader2 className="w-3 h-3 animate-spin text-indigo-600" /> Working...
                         </span>
                     )}
                 </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
                 {steps.map((step) => {
                     const isPending = step.status === "pending";
                     const isActive = step.status === "active";
@@ -189,38 +191,36 @@ export default function AgentActivityTrace({ steps, isComplete = false, error = 
                     return (
                         <div
                             key={step.id}
-                            className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors duration-150 ${
+                            className={`flex items-start gap-2.5 p-2 rounded-xl transition-colors duration-150 ${
                                 isActive
-                                    ? "bg-blue-50/60 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-800/40"
-                                    : "bg-slate-50/50 dark:bg-slate-800/30"
+                                    ? "bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/40"
+                                    : "bg-slate-50/60 dark:bg-slate-800/30 border border-transparent"
                             }`}
                         >
                             <div className="mt-0.5 flex-shrink-0">
-                                {isDone && <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />}
-                                {isActive && <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />}
-                                {isErr && <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />}
+                                {isDone && <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                                {isActive && <Loader2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin" />}
+                                {isErr && <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />}
                                 {isPending && <Circle className="w-4 h-4 text-slate-300 dark:text-slate-600" />}
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className={`text-xs font-medium truncate ${
-                                        isActive
-                                            ? "text-blue-900 dark:text-blue-200 font-semibold"
-                                            : isDone
-                                                ? "text-slate-800 dark:text-slate-200"
-                                                : isErr
-                                                    ? "text-red-700 dark:text-red-300"
-                                                    : "text-slate-500 dark:text-slate-400"
-                                    }`}>
-                                        {step.label}
-                                    </p>
-                                </div>
+                                <p className={`text-xs truncate ${
+                                    isActive
+                                        ? "text-indigo-950 dark:text-indigo-200 font-bold"
+                                        : isDone
+                                            ? "text-slate-800 dark:text-slate-200 font-medium"
+                                            : isErr
+                                                ? "text-rose-700 dark:text-rose-300 font-semibold"
+                                                : "text-slate-400 dark:text-slate-500"
+                                }`}>
+                                    {step.label}
+                                </p>
 
                                 {step.tool && (
                                     <div className="mt-1 flex items-center gap-1.5">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                                            Running: {step.tool}
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">
+                                            tool: {step.tool}
                                         </span>
                                     </div>
                                 )}
@@ -231,13 +231,14 @@ export default function AgentActivityTrace({ steps, isComplete = false, error = 
             </div>
 
             {error && (
-                <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 mt-0.5" />
+                <div className="mt-3 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/40 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-500 mt-0.5" />
                     <div>
-                        <span className="font-semibold">Execution Interrupted:</span> {error}
+                        <span className="font-bold">Interrupted:</span> {error}
                     </div>
                 </div>
             )}
         </div>
     );
 }
+

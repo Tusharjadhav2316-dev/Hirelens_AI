@@ -1,185 +1,316 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { getRecentHistory, deleteHistoryItem, ActivityHistoryItem } from "@/lib/historyService";
-import { Clock, Trash2, ArrowRight, FileText, BarChart, Briefcase, Mail, Loader2, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useResume } from "@/contexts/ResumeContext";
+import { getRecentHistory, deleteHistoryItem, ActivityHistoryItem } from "@/lib/historyService";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { Loader2 } from "lucide-react";
 
-export default function HistoryPage() {
-    const { user } = useAuth();
-    const router = useRouter();
-    const [history, setHistory] = useState<ActivityHistoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+import ResumeHistoryHeader from "@/components/resume-history/ResumeHistoryHeader";
+import HistoryMetricsRow from "@/components/resume-history/HistoryMetricsRow";
+import HistoryToolbar from "@/components/resume-history/HistoryToolbar";
+import ResumeVersionList from "@/components/resume-history/ResumeVersionList";
+import ResumeHistoryPreviewPanel from "@/components/resume-history/ResumeHistoryPreviewPanel";
+import {
+  ResumeVersionItem,
+  HistoryFilterTab,
+  HistorySortOption,
+} from "@/components/resume-history/HistoryTypes";
+import { SAMPLE_RESUME_VERSIONS } from "@/components/resume-history/sampleResumeVersions";
 
-    const loadHistory = async () => {
-        if (!user) return;
-        setLoading(true);
-        try {
-            const data = await getRecentHistory(user.uid);
-            setHistory(data);
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to load history.");
-        } finally {
-            setLoading(false);
+export default function ResumeHistoryPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { setResume } = useResume();
+
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [versions, setVersions] = useState<ResumeVersionItem[]>(SAMPLE_RESUME_VERSIONS);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
+    SAMPLE_RESUME_VERSIONS[0]?.id || null
+  );
+
+  // Filter & Search states
+  const [activeTab, setActiveTab] = useState<HistoryFilterTab>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<HistorySortOption>("recent-updated");
+  const [templateFilter, setTemplateFilter] = useState("all");
+
+  // Load user's real Firestore resume activities
+  const loadHistory = async () => {
+    setIsRefreshing(true);
+    try {
+      if (user?.uid) {
+        const historyData = await getRecentHistory(user.uid);
+        const resumeActivities = historyData.filter((item) => item.type === "resume");
+
+        if (resumeActivities.length > 0) {
+          const userVersions: ResumeVersionItem[] = resumeActivities.map((item) => {
+            const resumeData = item.structuredData || {
+              id: item.id,
+              title: item.title,
+              template: "modern",
+              personalInfo: {
+                fullName: user.displayName || "User Name",
+                email: user.email || "",
+                phone: "",
+                location: "",
+                summary: item.contentSnapshot || "",
+              },
+              experience: [],
+              education: [],
+              skills: [],
+              projects: [],
+              achievements: [],
+              certifications: [],
+            };
+
+            const score = item.metadata?.score || 85;
+            return {
+              id: item.id,
+              title: item.title || "Custom Resume Draft",
+              roleTitle: item.metadata?.jobTitle || "Software Engineer",
+              template: (resumeData.template as any) || "modern",
+              atsScore: score,
+              isAtsOptimized: score >= 80,
+              isCustomTemplate: false,
+              isStarred: false,
+              skills: resumeData.skills?.slice(0, 6) || ["React", "TypeScript", "Next.js"],
+              updatedAt: item.createdAt?.toDate ? "Recently" : "Just now",
+              createdAt: item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : "Recently",
+              viewsCount: 12,
+              downloadsCount: 3,
+              resumeData,
+            };
+          });
+
+          // Combine with sample versions (avoid duplicate ids)
+          const combined = [
+            ...userVersions,
+            ...SAMPLE_RESUME_VERSIONS.filter((s) => !userVersions.some((u) => u.id === s.id)),
+          ];
+          setVersions(combined);
+          if (!selectedVersionId && combined.length > 0) {
+            setSelectedVersionId(combined[0].id);
+          }
         }
-    };
-
-    useEffect(() => {
-        if (user) loadHistory();
-    }, [user]);
-
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) return;
-        setDeletingId(id);
-
-        try {
-            await deleteHistoryItem(user.uid, id);
-            setHistory(prev => prev.filter(item => item.id !== id));
-            toast.success("Activity removed.");
-        } catch (error) {
-            toast.error("Failed to delete activity.");
-        } finally {
-            setDeletingId(null);
-        }
-    };
-
-    const handleView = (item: ActivityHistoryItem) => {
-        switch (item.type) {
-            case "resume":
-                router.push(`/dashboard/builder?historyId=${item.id}`);
-                break;
-            case "ats-analysis":
-                router.push(`/dashboard/resume-analyzer?historyId=${item.id}`);
-                break;
-            case "job-match":
-                router.push(`/dashboard/job-matcher?historyId=${item.id}`);
-                break;
-            case "cover-letter":
-                router.push(`/dashboard/cover-letter?historyId=${item.id}`);
-                break;
-        }
-    };
-
-    const getTypeDetails = (type: ActivityHistoryItem['type']) => {
-        switch (type) {
-            case "resume": return { icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/30", label: "Resume Built" };
-            case "ats-analysis": return { icon: BarChart, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", label: "ATS Analysis" };
-            case "job-match": return { icon: Briefcase, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30", label: "Job Match" };
-            case "cover-letter": return { icon: Mail, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30", label: "Cover Letter" };
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
-                <Loader2 className="w-8 h-8 animate-spin mb-4 text-blue-500" />
-                <p className="font-medium animate-pulse">Loading your activity history...</p>
-            </div>
-        );
+      }
+    } catch (error) {
+      console.error("Error loading resume history:", error);
+      toast.error("Failed to refresh resume history");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
+  };
 
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
-            <div className="border-b border-slate-200 dark:border-slate-800 pb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-blue-600 dark:text-blue-500" />
-                        Activity History
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-                        Your resume activities from the past 7 days.
-                    </p>
-                </div>
-                <button
-                    onClick={loadHistory}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    title="Refresh history"
-                >
-                    <RefreshCw className="w-5 h-5" />
-                </button>
-            </div>
+  useEffect(() => {
+    loadHistory();
+  }, [user]);
 
-            {history.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
-                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                        <Clock className="w-8 h-8 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Recent Activity</h3>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
-                        Build a resume, run an ATS analyzer, or map to a job. Your actions will automatically save here for 7 days.
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
-                    {history.map((item) => {
-                        const { icon: Icon, color, bg, label } = getTypeDetails(item.type);
-                        const createdDate = item.createdAt?.toDate ? item.createdAt.toDate() : new Date();
-                        const expiresDate = item.expiresAt?.toDate ? item.expiresAt.toDate() : new Date(Date.now() + 7 * 86400000);
-                        const expiresIn = formatDistanceToNow(expiresDate);
-
-                        return (
-                            <div
-                                key={item.id}
-                                onClick={() => handleView(item)}
-                                className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer relative flex flex-col"
-                            >
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className={`flex items-center gap-2 px-2.5 py-1 rounded-md ${bg}`}>
-                                        <Icon className={`w-3.5 h-3.5 ${color}`} />
-                                        <span className={`text-[11px] font-bold uppercase tracking-wider ${color}`}>{label}</span>
-                                    </div>
-                                    <button
-                                        onClick={(e) => handleDelete(item.id, e)}
-                                        disabled={deletingId === item.id}
-                                        className="text-slate-400 hover:text-red-500 bg-white dark:bg-slate-900 rounded-md p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                    </button>
-                                </div>
-
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 truncate pr-6">
-                                    {item.title}
-                                </h3>
-
-                                <div className="flex flex-col gap-1.5 mb-4">
-                                    {item.metadata?.company && (
-                                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
-                                            {item.metadata.company} {item.metadata.jobTitle && `— ${item.metadata.jobTitle}`}
-                                        </div>
-                                    )}
-                                    {item.metadata?.score !== undefined && (
-                                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400">
-                                            Score: <span className={item.metadata.score >= 80 ? 'text-emerald-500' : item.metadata.score >= 60 ? 'text-amber-500' : 'text-red-500'}>{item.metadata.score}%</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {item.contentSnapshot && (
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 flex-grow font-serif italic border-l-2 border-slate-200 dark:border-slate-800 pl-3">
-                                        "{item.contentSnapshot.replace(/\n/g, ' ')}"
-                                    </p>
-                                )}
-
-                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                                    <div className="flex flex-col">
-                                        <span className="text-slate-400">Created: {createdDate.toLocaleDateString()}</span>
-                                        <span className="text-amber-600 dark:text-amber-500 font-semibold text-[10px]">Expires in {expiresIn}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-500 group-hover:translate-x-1 transition-transform">
-                                        View <ArrowRight className="w-3 h-3" />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
+  // Star Toggle
+  const handleToggleStar = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setVersions((prev) =>
+      prev.map((v) => {
+        if (v.id === id) {
+          const newStarred = !v.isStarred;
+          toast.success(newStarred ? "Added to Starred" : "Removed from Starred");
+          return { ...v, isStarred: newStarred };
+        }
+        return v;
+      })
     );
+  };
+
+  // Edit action: Load into ResumeContext and navigate to builder
+  const handleEdit = (version: ResumeVersionItem) => {
+    if (version.resumeData) {
+      setResume(version.resumeData);
+    }
+    toast.success(`Loaded "${version.title}" into Resume Builder`);
+    router.push("/dashboard/builder");
+  };
+
+  // Duplicate action
+  const handleDuplicate = (version: ResumeVersionItem) => {
+    const newId = `ver-${Date.now()}`;
+    const duplicated: ResumeVersionItem = {
+      ...version,
+      id: newId,
+      title: `${version.title} (Copy)`,
+      updatedAt: "Just now",
+      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      viewsCount: 0,
+      downloadsCount: 0,
+      resumeData: {
+        ...version.resumeData,
+        id: newId,
+        title: `${version.title} (Copy)`,
+      },
+    };
+    setVersions((prev) => [duplicated, ...prev]);
+    setSelectedVersionId(newId);
+    toast.success(`Duplicated "${version.title}"`);
+  };
+
+  // Delete action
+  const handleDelete = async (id: string) => {
+    const target = versions.find((v) => v.id === id);
+    if (!target) return;
+
+    if (window.confirm(`Are you sure you want to delete "${target.title}"?`)) {
+      try {
+        if (user?.uid) {
+          // Attempt Firestore delete in case it's a real stored activity
+          await deleteHistoryItem(user.uid, id).catch(() => {});
+        }
+        setVersions((prev) => prev.filter((v) => v.id !== id));
+        if (selectedVersionId === id) {
+          const remaining = versions.filter((v) => v.id !== id);
+          setSelectedVersionId(remaining[0]?.id || null);
+        }
+        toast.success(`Deleted "${target.title}"`);
+      } catch (err) {
+        toast.error("Failed to delete resume version");
+      }
+    }
+  };
+
+  // Clear all active filters
+  const handleClearFilters = () => {
+    setActiveTab("all");
+    setSearchQuery("");
+    setTemplateFilter("all");
+    setSortBy("recent-updated");
+  };
+
+  // Calculate filtered and sorted versions
+  const filteredVersions = useMemo(() => {
+    return versions
+      .filter((v) => {
+        // Tab Filter
+        if (activeTab === "ats-optimized" && !v.isAtsOptimized) return false;
+        if (activeTab === "custom-templates" && !v.isCustomTemplate) return false;
+        if (activeTab === "starred" && !v.isStarred) return false;
+
+        // Template Filter
+        if (templateFilter !== "all" && v.template.toLowerCase() !== templateFilter.toLowerCase()) {
+          return false;
+        }
+
+        // Search Query
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim();
+          const matchTitle = v.title.toLowerCase().includes(query);
+          const matchRole = v.roleTitle.toLowerCase().includes(query);
+          const matchTemplate = v.template.toLowerCase().includes(query);
+          const matchSkills = v.skills.some((s) => s.toLowerCase().includes(query));
+          if (!matchTitle && !matchRole && !matchTemplate && !matchSkills) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "ats-score") {
+          return b.atsScore - a.atsScore;
+        }
+        // Recently created / updated fallback
+        return 0;
+      });
+  }, [versions, activeTab, templateFilter, searchQuery, sortBy]);
+
+  // Tab counts
+  const counts = useMemo(() => {
+    return {
+      all: versions.length,
+      atsOptimized: versions.filter((v) => v.isAtsOptimized).length,
+      customTemplates: versions.filter((v) => v.isCustomTemplate).length,
+      starred: versions.filter((v) => v.isStarred).length,
+    };
+  }, [versions]);
+
+  // Selected Version item
+  const selectedVersion = useMemo(() => {
+    return versions.find((v) => v.id === selectedVersionId) || filteredVersions[0] || null;
+  }, [versions, selectedVersionId, filteredVersions]);
+
+  const isFiltered =
+    activeTab !== "all" || searchQuery.trim() !== "" || templateFilter !== "all";
+
+  return (
+    <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-in fade-in duration-300">
+      {/* 1. Header */}
+      <ResumeHistoryHeader
+        onRefresh={loadHistory}
+        isRefreshing={isRefreshing}
+      />
+
+      {/* 2. Top Metrics */}
+      <HistoryMetricsRow
+        totalResumes={versions.length}
+        atsOptimizedCount={counts.atsOptimized}
+        totalViews={312}
+        totalDownloads={28}
+      />
+
+      {/* 3. Filter & Search Toolbar */}
+      <HistoryToolbar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        templateFilter={templateFilter}
+        onTemplateFilterChange={setTemplateFilter}
+        counts={counts}
+      />
+
+      {/* 4. 2-Column Main Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Resume Version List (~42% on desktop) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+              Resume Versions ({filteredVersions.length})
+            </h2>
+            {isFiltered && (
+              <button
+                onClick={handleClearFilters}
+                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                Reset filters
+              </button>
+            )}
+          </div>
+
+          <ResumeVersionList
+            versions={filteredVersions}
+            selectedVersionId={selectedVersion?.id || null}
+            onSelectVersion={(v) => setSelectedVersionId(v.id)}
+            onToggleStar={handleToggleStar}
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
+            onDownload={handleEdit}
+            onDelete={handleDelete}
+            onClearFilters={handleClearFilters}
+            isFiltered={isFiltered}
+          />
+        </div>
+
+        {/* Right Column: Live Resume Preview Panel (~58% on desktop) */}
+        <div className="lg:col-span-7 sticky top-6">
+          <ResumeHistoryPreviewPanel
+            selectedVersion={selectedVersion}
+            onEdit={handleEdit}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }

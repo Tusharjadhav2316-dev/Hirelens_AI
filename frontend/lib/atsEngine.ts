@@ -3,6 +3,7 @@ import {
     MASTER_STOP_WORDS,
     RECOGNIZED_TECHNICAL_PHRASES
 } from "./atsConfig";
+import { extractCanonicalKeywords } from "./keywordExtractor";
 
 export interface ATSBreakdownItem {
     label: string;
@@ -32,60 +33,16 @@ const WEAK_VERBS = [
 ];
 
 export function normalizeText(text: string): string {
-    return text.toLowerCase().replace(/[^\w\s-+#.]/g, " ").replace(/\s+/g, " ").trim();
+    return text.toLowerCase().replace(/[\r\n\t]+/g, " ").replace(/[^a-z0-9+#.\-/]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // ----------------------------------------------------------------------------
-// TECHNICAL KEYWORD EXTRACTION (Single words, Bigrams, Trigrams)
+// TECHNICAL KEYWORD EXTRACTION (Canonical, Clean, Human-Readable)
 // Filters out recruiting boilerplate, HR words, and generic English stopwords
 // ----------------------------------------------------------------------------
 export function extractKeywords(text: string): string[] {
-    const normalized = normalizeText(text);
-    const words = normalized.split(/\s+/);
-    const keywordSet = new Set<string>();
-
-    // 1. Extract Recognized Multi-Word Technical Phrases (Bigrams & Trigrams)
-    for (const phrase of RECOGNIZED_TECHNICAL_PHRASES) {
-        const normPhrase = normalizeText(phrase);
-        if (normalized.includes(normPhrase)) {
-            keywordSet.add(normPhrase);
-        }
-    }
-
-    // 2. Extract Valid Single-Word Technical Keywords
-    for (const word of words) {
-        const cleanWord = word.replace(/^[^\w]+|[^\w]+$/g, "");
-        if (
-            cleanWord.length >= 2 &&
-            !MASTER_STOP_WORDS.has(cleanWord) &&
-            isNaN(Number(cleanWord))
-        ) {
-            keywordSet.add(cleanWord);
-        }
-    }
-
-    // 3. Dynamic Bigram Extraction for Unrecognized Technical Pairs
-    for (let i = 0; i < words.length - 1; i++) {
-        const w1 = words[i].replace(/^[^\w]+|[^\w]+$/g, "");
-        const w2 = words[i + 1].replace(/^[^\w]+|[^\w]+$/g, "");
-
-        if (
-            w1.length >= 2 &&
-            w2.length >= 2 &&
-            !MASTER_STOP_WORDS.has(w1) &&
-            !MASTER_STOP_WORDS.has(w2) &&
-            isNaN(Number(w1)) &&
-            isNaN(Number(w2))
-        ) {
-            const bigram = `${w1} ${w2}`;
-            // Avoid adding bigram if it contains generic stop words or boilerplate
-            if (!MASTER_STOP_WORDS.has(bigram)) {
-                keywordSet.add(bigram);
-            }
-        }
-    }
-
-    return Array.from(keywordSet);
+    const { canonicalList } = extractCanonicalKeywords(text);
+    return canonicalList;
 }
 
 // ----------------------------------------------------------------------------

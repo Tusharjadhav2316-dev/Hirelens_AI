@@ -1,14 +1,25 @@
-import { db, storage, auth } from "./firebase";
+import { db, auth } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp, deleteDoc, collection, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { deleteUser as deleteFirebaseAuthUser } from "firebase/auth";
 
 export interface UserProfile {
     fullName: string;
-    defaultTemplate: string;
-    themePreference: "light" | "dark" | "system";
-    avatarUrl: string;
-    updatedAt: any;
+    email?: string;
+    phoneNumber?: string;
+    location?: string;
+    headline?: string;
+    aboutMe?: string;
+    college?: string;
+    degree?: string;
+    graduationYear?: string;
+    linkedinUrl?: string;
+    githubUrl?: string;
+    skills?: string[];
+    defaultResumeId?: string;
+    defaultTemplate?: string;
+    themePreference?: "light" | "dark" | "system";
+    avatarUrl?: string;
+    updatedAt?: any;
 }
 
 /**
@@ -27,10 +38,21 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 
         // Initialize default profile
         const defaultProfile: UserProfile = {
-            fullName: "New User",
+            fullName: auth.currentUser?.displayName || "New User",
+            email: auth.currentUser?.email || "",
+            phoneNumber: "",
+            location: "",
+            headline: "",
+            aboutMe: "",
+            college: "",
+            degree: "",
+            graduationYear: "",
+            linkedinUrl: "",
+            githubUrl: "",
+            skills: ["React", "TypeScript", "Next.js"],
             defaultTemplate: "professional",
             themePreference: "system",
-            avatarUrl: "",
+            avatarUrl: auth.currentUser?.photoURL || "",
             updatedAt: serverTimestamp(),
         };
 
@@ -96,8 +118,8 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
                     return reject(new Error("Failed to get 2d context"));
                 }
 
-                // Compress to jpeg at 70% quality
-                const base64String = canvas.toDataURL("image/jpeg", 0.7);
+                // Compress to jpeg at 75% quality
+                const base64String = canvas.toDataURL("image/jpeg", 0.75);
 
                 try {
                     await updateUserProfile(userId, { avatarUrl: base64String });

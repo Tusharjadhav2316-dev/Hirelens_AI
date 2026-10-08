@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Send, Bot, User, AlertCircle, Loader2, Sparkles, Paperclip, FileText, X, Check, FileCheck } from "lucide-react";
+import { Send, Bot, User, AlertCircle, Loader2, Sparkles, Paperclip, FileText, X, FileCheck, Cpu } from "lucide-react";
 import QuickActions from "./QuickActions";
 import { AttachmentContext, AgentAttachment } from "@/types/agent";
 import { useAuth } from "@/contexts/AuthContext";
+import ScriptAccent from "@/components/common/ScriptAccent";
+import { cn } from "@/lib/utils";
 
 export interface Message {
     id: string;
@@ -42,7 +44,7 @@ export default function ConversationPane({
 }: ConversationPaneProps) {
     const { user } = useAuth();
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [attachments, setAttachments] = useState<AttachmentContext[]>([]);
@@ -57,7 +59,7 @@ export default function ConversationPane({
         scrollToBottom();
     }, [messages, isStreaming]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             if ((input.trim() || attachments.length > 0) && !isStreaming && !isUploading) {
@@ -144,46 +146,66 @@ export default function ConversationPane({
         setAttachments((prev) => prev.filter((a) => a.id !== id));
     };
 
+    const getUserInitials = (name?: string | null) => {
+        if (!name) return "U";
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+    };
+
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-            {/* Conversation Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-blue-600/20">
+        <div className="h-full flex flex-col bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+            {/* Conversation Header matching PDF Page 10 */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 gap-4 overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-xs shadow-indigo-500/20 ring-1 ring-indigo-500/30 shrink-0">
                         <Bot className="w-5 h-5" />
                     </div>
-                    <div>
-                        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                            AI Career Agent
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50">
-                                Multi-Agent System
-                            </span>
+                    <div className="flex items-center gap-2.5 flex-nowrap min-w-0">
+                        <h2 className="text-[21px] sm:text-[22px] font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap leading-tight">
+                            <span>AI Career </span>
+                            <span className="text-indigo-600 dark:text-indigo-400">Agent</span>
                         </h2>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Orchestrating resume, ATS, job search & interview prep
-                        </p>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/60 whitespace-nowrap shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
+                            Multi-Agent System
+                        </span>
                     </div>
+                </div>
+
+                {/* Header Right: Script Accent */}
+                <div className="hidden xl:flex items-center shrink-0 pl-3">
+                    <ScriptAccent
+                        text="Same You. Bigger Opportunities."
+                        className="text-xs origin-right text-indigo-600/70 dark:text-indigo-300/70 whitespace-nowrap"
+                    />
                 </div>
             </div>
 
+            {/* Suggested Action Cards (Directly below Header per Reference) */}
+            <QuickActions onSelectAction={onSelectQuickAction} disabled={isStreaming} />
+
             {/* Conversation Session Active Attachment Context Bar */}
             {sessionAttachments && sessionAttachments.length > 0 && (
-                <div className="px-6 py-2 bg-blue-50/60 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/40 flex items-center gap-2 overflow-x-auto text-xs">
-                    <span className="font-semibold text-blue-900 dark:text-blue-300 text-[11px] shrink-0 flex items-center gap-1">
-                        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Active Session Context:
+                <div className="px-5 py-2 bg-indigo-50/50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/40 flex items-center gap-2 overflow-x-auto text-xs">
+                    <span className="font-bold text-indigo-900 dark:text-indigo-300 text-[11px] shrink-0 flex items-center gap-1">
+                        <FileCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Session Context:
                     </span>
                     <div className="flex items-center gap-1.5 overflow-x-auto">
                         {sessionAttachments.map((att) => (
                             <div
                                 key={att.id}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-medium shrink-0 shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium shrink-0 shadow-2xs"
                             >
-                                <span className="truncate max-w-[120px]">{att.name}</span>
+                                <span className="truncate max-w-[140px]">{att.name}</span>
                                 {onRemoveSessionAttachment && (
                                     <button
                                         type="button"
                                         onClick={() => onRemoveSessionAttachment(att.id)}
-                                        className="hover:text-red-500 transition-colors p-0.5"
+                                        className="hover:text-rose-500 transition-colors p-0.5 ml-0.5"
                                         title="Remove document from context"
                                     >
                                         <X className="w-3 h-3" />
@@ -195,18 +217,18 @@ export default function ConversationPane({
                 </div>
             )}
 
-            {/* Message Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            {/* Message Thread Area */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-6 my-auto">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 border border-indigo-200/60 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3 shadow-xs">
                             <Sparkles className="w-6 h-6" />
                         </div>
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
-                            How can I help you today?
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                            How can I help advance your career today?
                         </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                            Ask a question, upload a career document (PDF, DOCX, TXT), or select a quick action below.
+                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                            Ask a question, upload your resume or job description, or pick a Quick Action below.
                         </p>
                     </div>
                 ) : (
@@ -215,34 +237,44 @@ export default function ConversationPane({
                         return (
                             <div
                                 key={msg.id}
-                                className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+                                className={cn(
+                                    "flex items-start gap-3",
+                                    isUser ? "flex-row-reverse" : "flex-row"
+                                )}
                             >
+                                {/* Avatar */}
                                 <div
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                                    className={cn(
+                                        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold shadow-xs",
                                         isUser
                                             ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
-                                            : "bg-blue-600 text-white"
-                                    }`}
+                                            : "bg-gradient-to-tr from-indigo-600 to-violet-600 text-white"
+                                    )}
                                 >
-                                    {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                                    {isUser ? (
+                                        <span>{getUserInitials(user?.displayName)}</span>
+                                    ) : (
+                                        <Bot className="w-4 h-4" />
+                                    )}
                                 </div>
 
-                                <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} max-w-[80%]`}>
+                                <div className={cn("flex flex-col max-w-[84%]", isUser ? "items-end" : "items-start")}>
                                     <div
-                                        className={`p-4 rounded-2xl text-xs leading-relaxed ${
+                                        className={cn(
+                                            "p-4 rounded-2xl text-xs leading-relaxed shadow-2xs",
                                             isUser
-                                                ? "bg-blue-600 text-white rounded-tr-none"
+                                                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-tr-xs"
                                                 : msg.error
-                                                ? "bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-tl-none"
-                                                : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none"
-                                        }`}
+                                                ? "bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-tl-xs"
+                                                : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60 text-slate-800 dark:text-slate-200 rounded-tl-xs"
+                                        )}
                                     >
                                         {msg.text ? (
                                             <p className="whitespace-pre-wrap">{msg.text}</p>
                                         ) : msg.isStreaming ? (
                                             <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                <span>Thinking & processing request...</span>
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                                                <span>Thinking and orchestrating agents...</span>
                                             </div>
                                         ) : null}
 
@@ -275,43 +307,39 @@ export default function ConversationPane({
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Error & Upload Error Alert */}
+            {/* Error Alert */}
             {(error || uploadError) && (
-                <div className="px-6 py-2 bg-red-50 dark:bg-red-950/40 border-t border-red-200 dark:border-red-800 flex items-center justify-between text-xs text-red-600 dark:text-red-400">
+                <div className="px-5 py-2 bg-rose-50 dark:bg-rose-950/40 border-t border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-600 dark:text-rose-400">
                     <div className="flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         <span>{uploadError || error}</span>
                     </div>
                     <button
                         onClick={() => setUploadError(null)}
-                        className="p-1 hover:text-red-800 dark:hover:text-red-200"
+                        className="p-1 hover:text-rose-800 dark:hover:text-rose-200"
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
                 </div>
             )}
 
-            {/* Quick Actions Footer Bar */}
-            <div className="px-6 py-2 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200/60 dark:border-slate-800">
-                <QuickActions onSelectAction={onSelectQuickAction} disabled={isStreaming} />
-            </div>
-
-            {/* Input Form & Attachment Bar */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
+            {/* Composer & Attachment Form */}
+            <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
                 {/* File Attachment Upload Chips */}
                 {attachments.length > 0 && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1">
                         {attachments.map((att) => (
                             <div
                                 key={att.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium shrink-0"
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold shrink-0"
                             >
-                                <FileText className="w-3.5 h-3.5 text-blue-500" />
-                                <span className="truncate max-w-[140px]">{att.name}</span>
+                                <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                                <span className="truncate max-w-[160px]">{att.name}</span>
                                 <button
                                     type="button"
                                     onClick={() => removeAttachment(att.id)}
-                                    className="p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full transition-colors text-blue-600 dark:text-blue-300"
+                                    className="p-0.5 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded-full transition-colors text-indigo-600 dark:text-indigo-300 ml-1"
+                                    aria-label="Remove attachment"
                                 >
                                     <X className="w-3 h-3" />
                                 </button>
@@ -320,7 +348,7 @@ export default function ConversationPane({
                     </div>
                 )}
 
-                <form onSubmit={handleFormSubmit} className="flex items-end gap-2">
+                <form onSubmit={handleFormSubmit} className="flex items-center gap-2.5 w-full">
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -330,16 +358,16 @@ export default function ConversationPane({
                         className="hidden"
                     />
 
-                    <div className="relative flex-1">
-                        <textarea
-                            ref={textareaRef}
+                    <div className="relative flex-1 min-w-0 flex items-center bg-slate-50 dark:bg-slate-800/90 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-transparent transition-all shadow-2xs h-12">
+                        <input
+                            ref={inputRef}
+                            type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Ask AI Agent or attach document (e.g. 'Build an ATS optimized resume from this reference')..."
+                            placeholder="Ask AI Agent or attach document (e.g. 'Analyze my ATS score')..."
                             disabled={isStreaming}
-                            rows={2}
-                            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 text-slate-900 dark:text-white text-xs leading-relaxed placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:border-transparent resize-none disabled:opacity-50"
+                            className="w-full pl-4 pr-11 bg-transparent text-slate-900 dark:text-white text-sm leading-normal placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden disabled:opacity-50 h-full box-border truncate"
                         />
 
                         <button
@@ -347,12 +375,13 @@ export default function ConversationPane({
                             onClick={handleAttachButtonClick}
                             disabled={isStreaming || isUploading}
                             title="Attach career document (PDF, DOCX, TXT)"
-                            className="absolute right-3 bottom-3 p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 transition-colors cursor-pointer"
+                            aria-label="Attach document"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
                         >
                             {isUploading ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                <Loader2 className="w-[18px] h-[18px] animate-spin text-indigo-600" />
                             ) : (
-                                <Paperclip className="w-4 h-4" />
+                                <Paperclip className="w-[18px] h-[18px]" />
                             )}
                         </button>
                     </div>
@@ -360,12 +389,13 @@ export default function ConversationPane({
                     <button
                         type="submit"
                         disabled={isStreaming || isUploading || (!input.trim() && attachments.length === 0)}
-                        className="p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-40 disabled:hover:bg-blue-600 transition-colors shadow-xs shrink-0 cursor-pointer"
+                        aria-label="Send message"
+                        className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold disabled:opacity-40 transition-all shadow-xs hover:shadow-md flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
                     >
                         {isStreaming ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4.5 h-4.5 animate-spin" />
                         ) : (
-                            <Send className="w-4 h-4" />
+                            <Send className="w-4 h-4 translate-x-[0.5px]" />
                         )}
                     </button>
                 </form>

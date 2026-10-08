@@ -22,3 +22,11 @@
 ## ADR-UI-04: Data Truthfulness & Honest Empty States
 - **Context**: Reference screens show mock populated data for unbacked features (e.g., third-party job listings).
 - **Decision**: Render real user data from existing services (`atsAnalyzer.ts`, `historyService.ts`, `profileService.ts`, `ResumeContext`). For unbacked feature shells, render clean empty states without fabricating fake production databases.
+
+## ADR-UI-05: Dashboard (Day 05) Activity Chart & Collapsible Sidebar Rail
+- **Context**: PDF Page 8 contains a timeseries Activity Overview chart and a collapsible sidebar interaction. The repository does not currently store timeseries activity data.
+- **Decision**:
+  1. Do not install heavy charting libraries to fabricate synthetic timeseries graphs. Instead, render a faithful Activity Overview card matching PDF Page 8 proportions with an honest empty state explaining that activity insights will appear once enough application and interview data is recorded.
+  2. Implement collapsible sidebar state (`isCollapsed`) synchronized directly between `<Sidebar />` and the main dashboard content offset (`lg:pl-64` vs `lg:pl-20`) in `DashboardLayout`, ensuring zero layout mismatch or overlap.
+  3. Strict 9 navigation items in the exact product order specified for Day 05.
+

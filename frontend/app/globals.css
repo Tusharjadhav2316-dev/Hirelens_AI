@@ -2,7 +2,7 @@
 @import "../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:is(.dark, .dark *));
 
 :root {
   /* Light Mode Scrollbar */
@@ -203,5 +203,20 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Dark mode autofill fix to prevent white/yellow browser background */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark textarea:-webkit-autofill,
+  .dark textarea:-webkit-autofill:hover,
+  .dark textarea:-webkit-autofill:focus,
+  .dark select:-webkit-autofill,
+  .dark select:-webkit-autofill:hover,
+  .dark select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f1f5f9;
+    -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
